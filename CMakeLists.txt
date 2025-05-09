@@ -1,0 +1,1 @@
+zephyr_sources(max32664c.c max32664c_worker.c)
