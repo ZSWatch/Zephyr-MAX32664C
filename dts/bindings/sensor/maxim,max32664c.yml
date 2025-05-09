@@ -1,0 +1,32 @@
+description: |
+    The MAX32664 is a ultra-low power biometric sensor hub. See more info at:
+    https://www.analog.com/media/en/technical-documentation/data-sheets/MAX32664.pdf
+
+compatible: "maxim,max32664c"
+
+include: [sensor-device.yaml, i2c-device.yaml]
+
+properties:
+    reset-gpios:
+      type: phandle-array
+      required: true
+      description: External System Reset (Active-Low) Input.
+
+    mfio-gpios:
+      type: phandle-array
+      required: true
+      description: MFIO asserts low as an output when the sensor hub needs to
+        communication with the host; MFIO acts as an input and when held
+        low during a reset, the sensor hub enters bootloader mode.
+
+    motion-time:
+      type: int
+      default: 200
+      description:
+        Motion activation time in milliseconds.
+
+    motion-threshold:
+      type: int
+      default: 500
+      description:
+        Motion activation time in milli-g.

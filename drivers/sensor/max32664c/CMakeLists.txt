@@ -1,0 +1,1 @@
+zephyr_sources_ifdef(CONFIG_SENSOR_MAX32664C max32664c.c max32664c_worker.c)

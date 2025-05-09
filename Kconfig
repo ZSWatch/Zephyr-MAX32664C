@@ -1,47 +1,9 @@
-# MAX62664 biometric sensor hub configuration options.
+menu "Zephyr Kernel"
+    source "Kconfig.zephyr"
+endmenu
 
-# Copyright (c) 2025, Daniel Kampert
-#
-# SPDX-License-Identifier: Apache-2.0
-
-config SENSOR_MAX32664C
-    bool "MAX32664C Driver"
-    default y
-    depends on DT_HAS_MAXIM_MAX32664C_ENABLED
-    select I2C
-    help
-        Enable the driver for the MAX32664C sensor hub.
-
-if SENSOR_MAX32664C
-    config MAX32664C_USE_STATIC_MEMORY
-        bool "Enable this option if you don't want to use dynamic memory"
-        default y
-
-    config MAX32664C_QUEUE_SIZE
-        int "Length of the message queue"
-        default 32
-
-    choice
-        prompt "AFE sensor ID used by the sensor hub"
-        default MAX32664C_USE_MAX86161
-
-        config MAX32664C_USE_MAX86141
-            bool "MAX86141"
-
-        config MAX32664C_USE_MAX86161
-            bool "MAX86161"
-    endchoice
-
-    config MAX32664C_ACC_ID
-        hex "Accelerometer ID sensor ID used by the sensor hub"
-        default 0x1B
-
-    config MAX32664C_THREAD_STACK_SIZE
-        int "MAX32664C sample thread stack size"
-        default 4096
-
-module = MAXIM_MAX32664C
-module-str = MAXIM_MAX32664C
-source "subsys/logging/Kconfig.template.log_config"
-
-endif
+menu "HR-Demo"
+    menu "Custom drivers"
+        rsource "drivers/Kconfig"
+    endmenu
+endmenu

@@ -1,0 +1,24 @@
+/ {
+    aliases {
+        sensor = &biometric_hub;
+    };
+};
+
+&i2c1 {
+    compatible = "nordic,nrf-twim";
+    status = "okay";
+    clock-frequency = <400000>;
+    zephyr,flash-buf-max-size = <8250>;
+};
+
+&i2c1 {
+    biometric_hub: max32664c@55 {
+        compatible = "maxim,max32664c";
+        reg = <0x55>;
+        status = "okay";
+        reset-gpios = <&gpio0 8 GPIO_ACTIVE_HIGH>;
+        mfio-gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
+        motion-time = <200>;
+        motion-threshold = <500>;
+    };
+};
