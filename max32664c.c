@@ -571,7 +571,7 @@ static int max32664c_sample_fetch(const struct device *dev,
 {
     struct max32664c_data *data = dev->data;
 
-    k_msgq_get(&data->raw_queue, &data->raw.acc, K_NO_WAIT);
+    k_msgq_get(&data->raw_queue, &data->raw, K_NO_WAIT);
 
     if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC) || (data->op_mode == MAX32664C_OP_MODE_ALGO_AGC)) {
         k_msgq_get(&data->report_queue, &data->report, K_NO_WAIT);

@@ -146,8 +146,6 @@ void max32664c_worker(const struct device *dev)
                     raw_data.acc.y = ((int16_t)(max32664_buffer[21]) << 8) | max32664_buffer[22];
                     raw_data.acc.z = ((int16_t)(max32664_buffer[23]) << 8) | max32664_buffer[24];
 
-                    LOG_INF("Test: %i", raw_data.acc.x);
-
                     while (k_msgq_put(&data->raw_queue, &raw_data, K_NO_WAIT) != 0) {
                         k_msgq_purge(&data->raw_queue);
                     }
