@@ -26,18 +26,32 @@
 
 LOG_MODULE_REGISTER(maxim_max32664c, CONFIG_MAXIM_MAX32664C_LOG_LEVEL);
 
-#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
-    static uint8_t max32664c_algo_config_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE * sizeof(max32664c_algo_config_t)];
-    static uint8_t max32664c_raw_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE * sizeof(max32664c_raw_t)];
-    static uint8_t max32664c_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE * (sizeof(max32664c_raw_t) + sizeof(max32664c_report_t))];
+#if CONFIG_MAX32664C_USE_STATIC_MEMORY
+    static uint8_t max32664c_raw_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE * sizeof(struct max32664c_raw_t)];
+    static uint8_t max32664c_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t))];
+
+    #if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+    static uint8_t max32664c_ext_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_ext_report_t))];
+    #endif
 #endif
 
 static K_THREAD_STACK_DEFINE(max32664c_thread_stack, CONFIG_MAX32664C_THREAD_STACK_SIZE);
 
-int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx_len, uint8_t* rx_buf, uint32_t rx_len, uint16_t delay)
+/** @brief          Basic I2C transmission to and from the sensor hub.
+ *  @param dev      Pointer to device
+ *  @param tx_buf   Pointer to Tx buffer
+ *  @param tx_len   Length of Tx buffer
+ *  @param rx_buf   Pointer to Rx buffer
+ *  @param rx_len   Length of Rx buffer
+ *  @param delay    Command delay in milliseconds. See the documentation to get the delay for a specific command.
+ *                  Use MAX32664C_DEFAULT_CMD_DELAY for the default delay.
+ *  @return         0 when successful
+ */
+int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx_len, uint8_t* rx_buf, uint32_t rx_len, uint16_t delay_ms)
 {
     const struct max32664c_config *config = dev->config;
 
+    /* Wake up the sensor hub before the transmission starts. */
     gpio_pin_set_dt(&config->mfio_gpio, false);
     k_sleep(K_USEC(500));
 
@@ -46,7 +60,7 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx
         return -EBUSY;
     }
 
-    k_sleep(K_MSEC(delay));
+    k_sleep(K_MSEC(delay_ms));
 
     if (i2c_read_dt(&config->i2c, rx_buf, rx_len)) {
         LOG_ERR("I2C read error!");
@@ -55,11 +69,11 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx
 
     k_sleep(K_MSEC(MAX32664C_DEFAULT_CMD_DELAY));
 
+    /* The sensor hub can enter sleep mode again now. */
     gpio_pin_set_dt(&config->mfio_gpio, true);
     k_sleep(K_USEC(300));
 
     /* Check the status byte for a valid transaction */
-    //LOG_DBG("Status: %u", rx_buf[0]);
     if (rx_buf[0] != 0) {
         return -EINVAL;
     }
@@ -67,42 +81,71 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx
     return 0;
 }
 
-static int max32664c_set_spo2_coeffs(const struct device *dev, int32_t a, int32_t b, int32_t c)
+/** @brief          Enable / Disable the accelerometer.
+ *  @param dev      Pointer to device
+ *  @param enable   Enable / Disable 
+ *  @return         0 when successful
+ */
+static int max32664c_acc_enable(const struct device *dev, bool enable)
 {
-    uint8_t tx[15] = {0x50, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0xFF, 0xD7, 0xFB, 0xDD, 0x00, 0xAB, 0x61, 0xFE};
-    uint8_t rx[3];
+    uint8_t tx[4];
+    uint8_t rx;
 
-    // int32_t a_int = (int32_t)(a * 100000);
+    tx[0] = 0x44;
+    tx[1] = 0x04;
+    tx[2] = enable;
 
-    /*wr_buf[3] = (a_int & 0xff000000) >> 24;
-    wr_buf[4] = (a_int & 0x00ff0000) >> 16;
-    wr_buf[5] = (a_int & 0x0000ff00) >> 8;
-    wr_buf[6] = (a_int & 0x000000ff);
+#if CONFIG_MAX32664C_USE_EXTERNAL_ACC
+    tx[3] = 1;
+    #error "Not implemented!"
+#else
+    tx[3] = 0;
+#endif
 
-    int32_t b_int = (int32_t)(b * 100000);
-
-    wr_buf[7] = (b_int & 0xff000000) >> 24;
-    wr_buf[8] = (b_int & 0x00ff0000) >> 16;
-    wr_buf[9] = (b_int & 0x0000ff00) >> 8;
-    wr_buf[10] = (b_int & 0x000000ff);
-
-    int32_t c_int = (int32_t)(c * 100000);
-
-    wr_buf[11] = (c_int & 0xff000000) >> 24;
-    wr_buf[12] = (c_int & 0x00ff0000) >> 16;
-    wr_buf[13] = (c_int & 0x0000ff00) >> 8;
-    wr_buf[14] = (c_int & 0x000000ff);
-    */
-
-    //m_i2c_write(dev, wr_buf, sizeof(wr_buf));
+    if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, 20)) {
+        return -EINVAL;
+    }
 
     return 0;
 }
 
+/** @brief      Set the SpO2 calibration coefficients.
+ *              NOTE: See page 10 of the SpO2 and Heart Rate User Guide for additional information.
+ *  @param dev  Pointer to device
+ *  @return     0 when successful
+ */
+static int max32664c_set_spo2_coeffs(const struct device *dev)
+{
+    const struct max32664c_config *config = dev->config;
+
+    uint8_t tx[15];
+    uint8_t rx;
+
+    /* Write the calibration coefficients */
+    tx[0] = 0x50;
+    tx[1] = 0x07;
+    tx[2] = 0x00;
+
+    /* Copy the A value (index 0) into the transmission buffer */
+    memcpy(&tx[3], &config->spo2_calib[0], sizeof(int32_t));
+
+    /* Copy the B value (index 1) into the transmission buffer */
+    memcpy(&tx[7], &config->spo2_calib[1], sizeof(int32_t));
+
+    /* Copy the C value (index 2) into the transmission buffer */
+    memcpy(&tx[11], &config->spo2_calib[2], sizeof(int32_t));
+
+    return max32664c_i2c_transmit(dev, tx, 15, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY);
+}
+
+/** @brief      
+ *  @param dev  Pointer to device
+ *  @return     0 when successful
+ */
 static int max32664c_check_sensors(const struct device *dev)
 {
     uint8_t tx[3];
-    uint8_t rx[3];
+    uint8_t rx[2];
     struct max32664c_data *data = dev->data;
 
     LOG_DBG("Checking sensors...");
@@ -151,7 +194,7 @@ static int max32664c_set_mode_raw(const struct device *dev)
     /* Output mode Raw */
     tx[0] = 0x10;
     tx[1] = 0x00;
-    tx[2] = 0x01;
+    tx[2] = MAX32664C_OUT_SENSOR_ONLY;
     if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
         return -EINVAL;
     }
@@ -166,11 +209,7 @@ static int max32664c_set_mode_raw(const struct device *dev)
     }
 
     /* Enable the accelerometer */
-    tx[0] = 0x44;
-    tx[1] = 0x04;
-    tx[2] = 0x01;
-    tx[3] = 0x00;
-    if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, 20)) {
+    if (max32664c_acc_enable(dev, true)) {
         return -EINVAL;
     }
 
@@ -206,12 +245,12 @@ static int max32664c_set_mode_raw(const struct device *dev)
     tx[1] = 0x00;
     tx[2] = 0x25;
     tx[3] = 0x7F;
-    if( max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+    if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
         return -EINVAL;
     }
 
     #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
-        k_msgq_alloc_init(&data->raw_queue, sizeof(max32664c_acc_data_t), CONFIG_MAX32664C_QUEUE_SIZE);
+        k_msgq_alloc_init(&data->raw_queue, sizeof(struct max32664c_raw_t), CONFIG_MAX32664C_QUEUE_SIZE);
     #endif
 
     data->op_mode = MAX32664C_OP_MODE_RAW;
@@ -242,12 +281,8 @@ static int max32664c_disable_sensors(const struct device *dev)
         return -EINVAL;
     }
 
-    /* Disable the accelerometers */
-    tx[0] = 0x44;
-    tx[1] = 0x04;
-    tx[2] = 0x00;
-    tx[2] = 0x00;
-    if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, 20)) {
+    /* Disable the accelerometer */
+    if (max32664c_acc_enable(dev, false)) {
         return -EINVAL;
     }
 
@@ -275,8 +310,6 @@ static int max32664c_stop_algo(const struct device *dev)
 
     data->op_mode = MAX32664C_OP_MODE_STOP_ALGO;
 
-    //data->threadRunning = false;
-    //k_thread_join(&data->thread, K_FOREVER);
     if (data->op_mode == MAX32664C_OP_MODE_RAW) {
         #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
             k_msgq_cleanup(&data->raw_queue);
@@ -286,6 +319,13 @@ static int max32664c_stop_algo(const struct device *dev)
             k_msgq_cleanup(&data->report_queue);
         #endif
     }
+#if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+    else if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC_EXT) || (data->op_mode == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
+        #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
+            k_msgq_cleanup(&data->report_queue);
+        #endif
+    }
+#endif
 
     return 0;
 }
@@ -298,9 +338,11 @@ static int max32664c_set_mode_scd(const struct device *dev)
 
     LOG_DBG("MAX32664C entering SCD mode...");
 
-    // max32664c_set_spo2_coeffs(dev, DEFAULT_SPO2_A, DEFAULT_SPO2_B, DEFAULT_SPO2_C);
+    if (max32664c_set_spo2_coeffs(dev)) {
+        return -EINVAL;
+    }
 
-    // Set LED for SCD
+    /* Set LED for SCD */
     tx[0] = 0xE5;
     tx[1] = 0x02;
     if (max32664c_i2c_transmit(dev, tx, 2, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
@@ -310,15 +352,7 @@ static int max32664c_set_mode_scd(const struct device *dev)
     /* Set the output mode to algorithm data */
     tx[0] = 0x10;
     tx[1] = 0x00;
-    tx[2] = MAX32664C_MODE_ALGORITHM_ONLY;
-    if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        return -EINVAL;
-    }
-
-    /* Set the report rate to one report per sensor sample */
-    tx[0] = 0x10;
-    tx[1] = 0x02;
-    tx[2] = 0x01;
+    tx[2] = MAX32664C_OUT_ALGORITHM_ONLY;
     if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
         return -EINVAL;
     }
@@ -352,7 +386,7 @@ static int max32664c_set_mode_wake_on_motion(const struct device *dev)
         return -EINVAL;
     }
 
-    /* Set the motion detection threshold (see table 12 in the SPO2 and heart rate using guide) */
+    /* Set the motion detection threshold (see Table 12 in the SpO2 and Heart Rate Using Guide) */
     /*  Duration: 0.2 s */
     /*  Threshold: 0.5 g */
     tx[0] = 0x46;
@@ -365,28 +399,16 @@ static int max32664c_set_mode_wake_on_motion(const struct device *dev)
         return -EINVAL;
     }
 
-    /* Set output mode accelerometer only */
+    /* Set the output mode to sensor data */
     tx[0] = 0x10;
     tx[1] = 0x00;
-    tx[2] = 0x01;
-    if (max32664c_i2c_transmit(dev, tx, 3, &rx, MAX32664C_MODE_SENSOR_ONLY, MAX32664C_DEFAULT_CMD_DELAY)) {
-        return -EINVAL;
-    }
-
-    /* Set the report rate to one report per sensor sample */
-    tx[0] = 0x10;
-    tx[1] = 0x02;
-    tx[2] = 0x01;
-    if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+    tx[2] = MAX32664C_OUT_SENSOR_ONLY;
+    if (max32664c_i2c_transmit(dev, tx, 3, &rx, MAX32664C_OUT_SENSOR_ONLY, MAX32664C_DEFAULT_CMD_DELAY)) {
         return -EINVAL;
     }
 
     /* Enable the accelerometer */
-    tx[0] = 0x44;
-    tx[1] = 0x04;
-    tx[2] = 0x01;
-    tx[3] = 0x00;
-    if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, 20)) {
+    if (max32664c_acc_enable(dev, true)) {
         return -EINVAL;
     }
 
@@ -404,10 +426,7 @@ static int max32664c_exit_mode_wake_on_motion(const struct device *dev)
     LOG_DBG("MAX32664C exiting wake on motion mode...");
 
     /* Disable the accelerometer */
-    tx[0] = 0x44;
-    tx[1] = 0x04;
-    tx[2] = 0x00;
-    if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 30)) {
+    if (max32664c_acc_enable(dev, false)) {
         return -EINVAL;
     }
 
@@ -427,40 +446,67 @@ static int max32664c_exit_mode_wake_on_motion(const struct device *dev)
     return 0;
 }
 
-/** @brief      Read the status from the sensor hub.
- *              NOTE: Table 7. Host Commands—AGC Mode
- *  @param dev  Pointer to device
+/** @brief              Put the sensor hub into algorithm mode.
+ *  @param dev          Pointer to device
+ *  @param device_mode  Target device mode
+ *  @param algo_mode    Target algorithm mode
+ *  @param extended     Set to #True when the extended mode should be used
+ *  @return             0 when successful
  */
-static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_mode device_mode, max32664c_algo_mode_t algo_mode, bool extended)
+static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_device_mode device_mode, enum max32664c_algo_mode algo_mode, bool extended)
 {
-    uint8_t tx[5];
     uint8_t rx;
+    uint8_t tx[5];
     struct max32664c_data *data = dev->data;
+    const struct max32664c_config *config = dev->config;
 
     LOG_DBG("Entering algorithm mode...");
 
-    /* Output mode sensor + algo data */
+#ifndef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+    if (extended) {
+        LOG_ERR("No support for extended reports enabled!");
+        return -EINVAL;
+    }
+#endif
+
+    /* Set the output mode to sensor and algorithm data */
     tx[0] = 0x10;
     tx[1] = 0x00;
-    tx[2] = 0x03;
+    tx[2] = MAX32664C_OUT_ALGO_AND_SENSOR;
     if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
         return -EINVAL;
     }
-
-    /* Set report period */
-    tx[0] = 0x10;
-    tx[1] = 0x02;
-    tx[2] = 0x01;
-    if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        return -EINVAL;
-    }
-
+    
     /* Set the algorithm mode */
     tx[0] = 0x50;
     tx[1] = 0x07;
     tx[2] = 0x0A;
     tx[3] = algo_mode;
     if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+        return -EINVAL;
+    }
+
+    /* Configure WHRM */
+    tx[0] = 0x50;
+    tx[1] = 0x07;
+    tx[2] = 0x17;
+    //tx[3] = config->hr_config[0];
+    //tx[4] = config->hr_config[1];
+    tx[3] = 0;
+    tx[4] = 0x73;
+    if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+        LOG_ERR("Can not configure WHRM!");
+        return -EINVAL;
+    }
+
+    /* Configure SpO2 */
+    tx[0] = 0x50;
+    tx[1] = 0x07;
+    tx[2] = 0x18;
+    tx[3] = config->spo2_config[0];
+    tx[4] = config->spo2_config[1];
+    if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+        LOG_ERR("Can not configure SpO2!");
         return -EINVAL;
     }
 
@@ -502,7 +548,7 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_mode
     } else if (device_mode == MAX32664C_OP_MODE_ALGO_AGC) {
         LOG_DBG("Entering AGC mode...");
 
-        /* Disable Auto PD */
+        /* Disable PD auto current calculation */
         tx[0] = 0x50;
         tx[1] = 0x07;
         tx[2] = 0x12;
@@ -540,7 +586,7 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_mode
         return -EINVAL;
     }
 
-    /* Enable HR and SpO2 algo */
+    /* Enable HR and SpO2 algorithm */
     tx[2] = 0x01;
     if (extended) {
         tx[2] = 0x02;
@@ -548,13 +594,22 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_mode
 
     tx[0] = 0x52;
     tx[1] = 0x07;
+
+    /* Use the maximum time to cover all modes (see Table 6 in the User Guide) */
     if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 320)) {
         return -EINVAL;
     }
 
-    #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
-        k_msgq_alloc_init(&data->report_queue, sizeof(max32664c_report_t), CONFIG_MAX32664C_QUEUE_SIZE);
+#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
+        if (!extended) {
+            k_msgq_alloc_init(&data->report_queue, sizeof(max32664c_report_t), CONFIG_MAX32664C_QUEUE_SIZE);
+        }
+    #if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+        else {
+            k_msgq_alloc_init(&data->ext_report_queue, sizeof(max32664c_ext_report_t), CONFIG_MAX32664C_QUEUE_SIZE);
+        }
     #endif
+#endif
 
     data->threadRunning = true;
     data->threadID = k_thread_create(&data->thread,
@@ -562,6 +617,39 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_mode
         sizeof(max32664c_thread_stack),
         (k_thread_entry_t)max32664c_worker,
         (void*)dev, NULL, NULL, K_LOWEST_APPLICATION_THREAD_PRIO, 0, K_NO_WAIT);
+
+    return 0;
+}
+
+/** @brief      Run a basic initialization on the sensor hub.
+ *  @param dev  Pointer to device
+ *  @return     0 when successful
+ */
+static int max32664c_init_hub(const struct device *dev)
+{
+    uint8_t rx;
+    uint8_t tx[5];
+    const struct max32664c_config *config = dev->config;
+
+    LOG_DBG("Initialize sensor hub");
+
+    /* Set the report rate to one report per sensor sample */
+    tx[0] = 0x10;
+    tx[1] = 0x02;
+    tx[2] = 0x01;
+    if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+        LOG_ERR("Can not set report rate!");
+        return -EINVAL;
+    }
+
+    /* Set interrupt threshold */
+    tx[0] = 0x10;
+    tx[1] = 0x01;
+    tx[2] = 0x01;
+    if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+        LOG_ERR("Can not set interrupt threshold!");
+        return -EINVAL;
+    }
 
     return 0;
 }
@@ -576,6 +664,11 @@ static int max32664c_sample_fetch(const struct device *dev,
     if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC) || (data->op_mode == MAX32664C_OP_MODE_ALGO_AGC)) {
         k_msgq_get(&data->report_queue, &data->report, K_NO_WAIT);
     }
+#if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+    else if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC_EXT) || (data->op_mode == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
+        k_msgq_get(&data->ext_report_queue, &data->ext_report, K_NO_WAIT);
+    }
+#endif
 
     return 0;
 }
@@ -619,22 +712,22 @@ static int max32664c_channel_get(const struct device *dev,
             val->val2 = data->raw.PPG4;
             break;
         }
-        case SENSOR_CHAN_HEARTRATE:
+        case SENSOR_CHAN_HEALTH_HEARTRATE:
         {
             val->val1 = data->report.hr;
             val->val2 = data->report.hr_confidence;
             break;
         }
-        case SENSOR_CHAN_RR:
+        case SENSOR_CHAN_HEALTH_RR:
         {
             val->val1 = data->report.rr;
             val->val2 = data->report.rr_confidence;
             break;
         }
-        case SENSOR_CHAN_SPO2:
+        case SENSOR_CHAN_HEALTH_SPO2:
         {
             val->val1 = data->report.spo2;
-            val->val2 = data->report.sp02_confidence;
+            val->val2 = data->report.spo2_confidence;
             break;
         }
         default:
@@ -654,7 +747,11 @@ static int max32664c_attr_set(const struct device *dev,
 {
     struct max32664c_data *data = dev->data;
 
-    if (chan != SENSOR_CHAN_HEARTRATE) {
+    if ((chan != SENSOR_CHAN_HEALTH_HEARTRATE) && (chan != SENSOR_CHAN_HEALTH_SPO2) &&
+        (chan != SENSOR_CHAN_HEALTH_RR) && (chan != SENSOR_CHAN_ACCEL_X) &&
+        (chan != SENSOR_CHAN_ACCEL_Z) && (chan != SENSOR_CHAN_ACCEL_Y) &&
+        (chan != SENSOR_CHAN_RED) && (chan != SENSOR_CHAN_GREEN) &&
+        (chan != SENSOR_CHAN_IR) && (chan != SENSOR_CHAN_ALL)) {
         return -EINVAL;
     }
 
@@ -667,55 +764,29 @@ static int max32664c_attr_set(const struct device *dev,
         case SENSOR_ATTR_HEIGHT:
         {
             data->algo_conf.height = val->val1;
-            while (k_msgq_put(&data->config_queue, &data->algo_conf, K_NO_WAIT) != 0) {
-                k_msgq_purge(&data->config_queue);
-            }
             break;
         }
         case SENSOR_ATTR_WEIGHT:
         {
             data->algo_conf.weight = val->val1;
-            while (k_msgq_put(&data->config_queue, &data->algo_conf, K_NO_WAIT) != 0) {
-                k_msgq_purge(&data->config_queue);
-            }
             break;
         }
         case SENSOR_ATTR_AGE:
         {
             data->algo_conf.age = val->val1;
-            while (k_msgq_put(&data->config_queue, &data->algo_conf, K_NO_WAIT) != 0) {
-                k_msgq_purge(&data->config_queue);
-            }
             break;
         }
         case SENSOR_ATTR_GENDER:
         {
             data->algo_conf.gender = val->val1;
-            while (k_msgq_put(&data->config_queue, &data->algo_conf, K_NO_WAIT) != 0) {
-                k_msgq_purge(&data->config_queue);
-            }
             break;
         }
-        case SENSOR_ATTR_CALIB_VECTOR:
-        {
-            break;
-        }
-        case SENSOR_ATTR_SPO2_COEFFS:
-        {
-            int32_t* coeffs = (int32_t*)val->val1;
-
-            if (max32664c_set_spo2_coeffs(dev, coeffs[0], coeffs[1], coeffs[2])) {
-                return -EINVAL;
-            }
-
-            break;
-        }
-        case SENSOR_ATTR_MOTION_TIME:
+        case SENSOR_ATTR_SLOPE_DUR:
         {
             data->motion_time = val->val1;
             break;
         }
-        case SENSOR_ATTR_MOTION_THRES:
+        case SENSOR_ATTR_SLOPE_TH:
         {
             data->motion_threshold = val->val1;
             break;
@@ -795,7 +866,11 @@ static int max32664c_attr_get(const struct device *dev,
 {
     struct max32664c_data *data = dev->data;
 
-    if (chan != SENSOR_CHAN_HEARTRATE) {
+    if ((chan != SENSOR_CHAN_HEALTH_HEARTRATE) && (chan != SENSOR_CHAN_HEALTH_SPO2) &&
+        (chan != SENSOR_CHAN_HEALTH_RR) && (chan != SENSOR_CHAN_ACCEL_X) &&
+        (chan != SENSOR_CHAN_ACCEL_Z) && (chan != SENSOR_CHAN_ACCEL_Y) &&
+        (chan != SENSOR_CHAN_RED) && (chan != SENSOR_CHAN_GREEN) &&
+        (chan != SENSOR_CHAN_IR) && (chan != SENSOR_CHAN_ALL)) {
         return -EINVAL;
     }
 
@@ -807,7 +882,7 @@ static int max32664c_attr_get(const struct device *dev,
             val->val2 = 0;
             break;
         }
-        case SENSOR_ATTR_SENSOR_IDS:
+        case SENSOR_ATTR_CONFIGURATION:
         {
             val->val1 = data->afe_id;
             val->val2 = data->accel_id;
@@ -837,7 +912,7 @@ static const struct sensor_driver_api max32664c_driver_api = {
 
 static int max32664c_init(const struct device *dev)
 {
-    uint8_t tx[4];
+    uint8_t tx[2];
     uint8_t rx[4];
     const struct max32664c_config *config = dev->config;
     struct max32664c_data *data = dev->data;
@@ -861,7 +936,7 @@ static int max32664c_init(const struct device *dev)
     gpio_pin_set_dt(&config->mfio_gpio, true);
     k_sleep(K_MSEC(20));
 
-    /* Wait for 50 ms (switch into app mode) + 1500 ms (initialization) (see page 17 of the user guide) */
+    /* Wait for 50 ms (switch into app mode) + 1500 ms (initialization) (see page 17 of the User Guide) */
     gpio_pin_set_dt(&config->reset_gpio, true);
     k_sleep(K_MSEC(1600));
 
@@ -889,33 +964,22 @@ static int max32664c_init(const struct device *dev)
 
     LOG_DBG("Version: %d.%d.%d", data->hub_ver[0], data->hub_ver[1], data->hub_ver[2]);
 
-    /* Set interrupt threshold */
-    tx[0] = 0x10;
-    tx[1] = 0x01;
-    tx[2] = 0x01;
-    if (max32664c_i2c_transmit(dev, tx, 3, rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        return -EINVAL;
-    }
-
     if (max32664c_check_sensors(dev)) {
         return -EINVAL;
     }
 
-    #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
-        k_msgq_alloc_init(&data->config_queue, sizeof(max32664c_algo_config_t), CONFIG_MAX32664C_QUEUE_SIZE);
-    #else
-        k_msgq_init(&data->config_queue, max32664c_algo_config_queue_buffer, sizeof(max32664c_algo_config_t), sizeof(max32664c_algo_config_queue_buffer) / sizeof(max32664c_algo_config_t));
-    #endif
+    if (max32664c_init_hub(dev)) {
+        return -EINVAL;
+    }
 
-    #ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
-        k_msgq_init(&data->raw_queue, max32664c_raw_queue_buffer, sizeof(max32664c_raw_t), sizeof(max32664c_raw_queue_buffer) / sizeof(max32664c_raw_t));
-        k_msgq_init(&data->report_queue, max32664c_report_queue_buffer, sizeof(max32664c_report_t), sizeof(max32664c_report_queue_buffer) / sizeof(max32664c_report_t));
+#if CONFIG_MAX32664C_USE_STATIC_MEMORY
+        k_msgq_init(&data->raw_queue, max32664c_raw_queue_buffer, sizeof(struct max32664c_raw_t), sizeof(max32664c_raw_queue_buffer) / sizeof(struct max32664c_raw_t));
+        k_msgq_init(&data->report_queue, max32664c_report_queue_buffer, sizeof(struct max32664c_report_t), sizeof(max32664c_report_queue_buffer) / sizeof(struct max32664c_report_t));
+        
+    #if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+        k_msgq_init(&data->ext_report_queue, max32664c_ext_report_queue_buffer, sizeof(struct max32664c_ext_report_t), sizeof(max32664c_ext_report_queue_buffer) / sizeof(struct max32664c_ext_report_t));
     #endif
-
-    /* Run the initial config of the algorithm based on the Device Tree */
-    //while (k_msgq_put(&data->config_queue, &config->algo_config, K_NO_WAIT) != 0) {
-    //   k_msgq_purge(&data->config_queue);
-    //}
+#endif
 
     return 0;
 }
@@ -932,10 +996,18 @@ static int max32664c_pm_action(const struct device *dev,
         }
         case PM_DEVICE_ACTION_SUSPEND:
         {
+            const struct max32664c_config *config = dev->config;
+
+            /* Pulling MFIO high will cause the hub to enter sleep mode */
+            gpio_pin_set_dt(&config->mfio_gpio, true);
+            k_sleep(K_MSEC(20));
             break;
         }
         case PM_DEVICE_ACTION_TURN_OFF:
         {
+            uint8_t rx;
+            uint8_t tx[3];
+
             /* Send a shut down command */
             /* NOTE: Toggling RSTN is needed to wake the device */
             tx[0] = 0x01;
@@ -970,6 +1042,9 @@ static int max32664c_pm_action(const struct device *dev,
         .i2c = I2C_DT_SPEC_INST_GET(inst),                                      \
         .reset_gpio = GPIO_DT_SPEC_INST_GET(inst, reset_gpios),                 \
         .mfio_gpio = GPIO_DT_SPEC_INST_GET(inst, mfio_gpios),                   \
+        .spo2_calib = DT_INST_PROP(inst, spo2_calib),                           \
+        .hr_config = DT_INST_PROP(inst, hr_config),                             \
+        .spo2_config = DT_INST_PROP(inst, spo2_config),                         \
         .motion_time = DT_INST_PROP(inst, motion_time),                         \
         .motion_threshold = DT_INST_PROP(inst, motion_threshold),               \
     };                                                                          \

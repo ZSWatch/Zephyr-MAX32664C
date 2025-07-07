@@ -51,6 +51,7 @@ struct bt_le_adv_param adv_param = {
 };
 
 const struct device *const sensor_hub = DEVICE_DT_GET(DT_ALIAS(sensor));
+static const struct gpio_dt_spec led_en = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
     .connected = connected,
@@ -98,7 +99,7 @@ static void hrs_notify(void)
     struct sensor_value value;
 
     sensor_sample_fetch(sensor_hub);
-    sensor_attr_get(sensor_hub, SENSOR_CHAN_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
+    sensor_attr_get(sensor_hub, SENSOR_CHAN_HEALTH_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
     if (value.val1 == MAX32664C_OP_MODE_RAW) {
         struct sensor_value x;
         struct sensor_value y;
@@ -116,7 +117,7 @@ static void hrs_notify(void)
     } else if (value.val1 == MAX32664C_OP_MODE_ALGO_AEC) {
         struct sensor_value hr;
 
-        sensor_channel_get(sensor_hub, SENSOR_CHAN_HEARTRATE, &hr);
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_HEALTH_HEARTRATE, &hr);
         LOG_INF("HR: %u", hr.val1);
         LOG_INF("Confidence: %u", hr.val2);
 
@@ -126,24 +127,23 @@ static void hrs_notify(void)
     }
 }
 
-static const struct gpio_dt_spec led_en = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
-
 int main(void)
 {
     struct sensor_value value;
 
     if (!device_is_ready(sensor_hub)) {
         LOG_ERR("Sensor hub not ready!");
+    } else {
+        LOG_INF("Sensor hub ready");
     }
-    LOG_INF("Sensor hub ready");
 
-	if (!gpio_is_ready_dt(&led_en)) {
-		return 0;
-	}
+    if (!gpio_is_ready_dt(&led_en)) {
+        return 0;
+    }
 
-	if (gpio_pin_configure_dt(&led_en, GPIO_OUTPUT_ACTIVE)) {
-		return 0;
-	}
+    if (gpio_pin_configure_dt(&led_en, GPIO_OUTPUT_ACTIVE)) {
+        return 0;
+    }
 
     gpio_pin_set_dt(&led_en, 1);
 
@@ -166,10 +166,10 @@ int main(void)
     }
     LOG_INF("Advertising successfully started");
 
-    value.val1 = MAX32664C_OP_MODE_RAW;
-    //value.val1 = MAX32664C_OP_MODE_ALGO_AEC;
-    value.val2 = MAX32664C_ALGO_MODE_CONT_HR_CONT_SPO2;
-    sensor_attr_set(sensor_hub, SENSOR_CHAN_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
+    //value.val1 = MAX32664C_OP_MODE_RAW;
+    value.val1 = MAX32664C_OP_MODE_ALGO_AEC;
+    value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
+    sensor_attr_set(sensor_hub, SENSOR_CHAN_HEALTH_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
 
     while(1)
     {

@@ -8,28 +8,18 @@
 #include <zephyr/drivers/i2c.h>
 #include <zephyr/drivers/gpio.h>
 
-#define SENSOR_ATTR_OP_MODE             (SENSOR_ATTR_PRIV_START + 1)
 #define SENSOR_ATTR_GENDER              (SENSOR_ATTR_PRIV_START + 2)
 #define SENSOR_ATTR_AGE                 (SENSOR_ATTR_PRIV_START + 3)
 #define SENSOR_ATTR_WEIGHT              (SENSOR_ATTR_PRIV_START + 4)
 #define SENSOR_ATTR_HEIGHT              (SENSOR_ATTR_PRIV_START + 5)
-#define SENSOR_ATTR_SENSOR_IDS          (SENSOR_ATTR_PRIV_START + 8)
-#define SENSOR_ATTR_CALIB_VECTOR        (SENSOR_ATTR_PRIV_START + 9)
-#define SENSOR_ATTR_SPO2_COEFFS         (SENSOR_ATTR_PRIV_START + 10)
-#define SENSOR_ATTR_MOTION_THRES        (SENSOR_ATTR_PRIV_START + 11)
-#define SENSOR_ATTR_MOTION_TIME         (SENSOR_ATTR_PRIV_START + 12)
+#define SENSOR_ATTR_OP_MODE             (SENSOR_ATTR_PRIV_START + 9)
 
-#define SENSOR_CHAN_HEARTRATE           (SENSOR_CHAN_PRIV_START + 1)
-#define SENSOR_CHAN_SPO2                (SENSOR_CHAN_PRIV_START + 2)
-#define SENSOR_CHAN_RR                  (SENSOR_CHAN_PRIV_START + 3)
+#define SENSOR_CHAN_HEALTH_HEARTRATE    (SENSOR_CHAN_PRIV_START + 1)
+#define SENSOR_CHAN_HEALTH_SPO2         (SENSOR_CHAN_PRIV_START + 2)
+#define SENSOR_CHAN_HEALTH_RR           (SENSOR_CHAN_PRIV_START + 3)
 
-#define MAX32664C_MOTION_DISABLE        0
-#define MAX32664C_MOTION_ENABLE         1
 #define MAX32664C_MOTION_TIME(ms)       ((uint8_t)((ms * 25UL) / 1000))
 #define MAX32664C_MOTION_THRESHOLD(mg)  ((uint8_t)((mg * 16UL) / 1000))
-#define MAX32664C_MODE_SENSOR_ONLY      1
-#define MAX32664C_MODE_ALGORITHM_ONLY   2
-#define MAX32664C_MODE_ALGO_AND_SENSOR  3
 
 #define MAX32664C_BIT_STATUS_COMM_ERR   0
 #define MAX32664C_BIT_STATUS_DATA_RDY   3
@@ -39,16 +29,18 @@
 
 #define MAX32664C_DEFAULT_CMD_DELAY     10
 
-/** @brief 
+/** @brief Output formats of the sensor hub.
  */
-enum max32664c_gender {
-    MAX32664_GENDER_MALE,
-    MAX32664_GENDER_FEMALE,
+enum max32664c_output_format {
+    MAX32664C_OUT_PAUSE,
+    MAX32664C_OUT_SENSOR_ONLY,
+    MAX32664C_OUT_ALGORITHM_ONLY,
+    MAX32664C_OUT_ALGO_AND_SENSOR,
 };
 
 /** @brief 
  */
-enum max32664c_mode {
+enum max32664c_device_mode {
     MAX32664C_OP_MODE_CAL,
     MAX32664C_OP_MODE_IDLE,
     MAX32664C_OP_MODE_RAW,
@@ -84,7 +76,7 @@ enum max32664c_scd_states {
 
 /** @brief 
  */
-typedef enum {
+enum max32664c_algo_mode {
     MAX32664C_ALGO_MODE_CONT_HR_CONT_SPO2,
     MAX32664C_ALGO_MODE_CONT_HR_SHOT_SPO2,
     MAX32664C_ALGO_MODE_CONT_HRM,
@@ -92,31 +84,38 @@ typedef enum {
     MAX32664C_ALGO_MODE_SAMPLED_HRM_SHOT_SPO2,
     MAX32664C_ALGO_MODE_ACT_TRACK,
     MAX32664C_ALGO_MODE_SPO2_CAL,
-} max32664c_algo_mode_t;
+};
 
 /** @brief 
  */
-typedef struct {
+enum max32664c_algo_gender {
+    MAX32664_ALGO_GENDER_MALE,
+    MAX32664_ALGO_GENDER_FEMALE,
+};
+
+/** @brief 
+ */
+struct max32664c_acc_data_t {
     int16_t x;
     int16_t y;
     int16_t z;
-} __attribute__((packed)) max32664c_acc_data_t;
+} __attribute__((packed));
 
-/** @brief 
+/** @brief Raw data structure, reported by the sensor hub.
  */
-typedef struct {
+struct max32664c_raw_t {
     uint32_t PPG1:24;
     uint32_t PPG2:24;
     uint32_t PPG3:24;
     uint32_t PPG4:24;
     uint32_t PPG5:24;
     uint32_t PPG6:24;
-    max32664c_acc_data_t acc;
-} __attribute__((packed)) max32664c_raw_t;
+    struct max32664c_acc_data_t acc;
+} __attribute__((packed));
 
-/** @brief 
+/** @brief Algorithm data structure, reported by the sensor hub.
  */
-typedef struct {
+struct max32664c_report_t {
     uint8_t op_mode;
     uint16_t hr;
     uint8_t hr_confidence;
@@ -124,7 +123,7 @@ typedef struct {
     uint8_t rr_confidence;
     uint8_t activity_class;
     uint16_t r;
-    uint8_t sp02_confidence;
+    uint8_t spo2_confidence;
     uint16_t spo2;
     uint8_t spo2_complete;
     uint8_t spo2_low_signal_quality;
@@ -133,16 +132,21 @@ typedef struct {
     uint8_t spo2_unreliable_r;
     uint8_t spo2_state;
     uint8_t scd;
-} __attribute__((packed)) max32664c_report_t;
+} __attribute__((packed));
+
+/** @brief Extended algorithm data structure, reported by the sensor hub.
+ */
+struct max32664c_ext_report_t {
+} __attribute__((packed));
 
 /** @brief 
  */
-typedef struct {
+struct max32664c_algo_config_t {
     uint16_t height;
     uint16_t weight;
     uint8_t age;
     uint8_t gender;
-} __attribute__((packed)) max32664c_algo_config_t;
+} __attribute__((packed));
 
 /** @brief 
  */
@@ -150,27 +154,35 @@ struct max32664c_config {
     struct i2c_dt_spec i2c;
     struct gpio_dt_spec reset_gpio;
     struct gpio_dt_spec mfio_gpio;
+    struct max32664c_algo_config_t algo_config;
+    int32_t spo2_calib[3];
     uint16_t motion_time;
     uint16_t motion_threshold;
-    max32664c_algo_config_t algo_config;
+    uint8_t hr_config[2];
+    uint8_t spo2_config[2];
+    uint8_t init_samp_avg;
+    uint8_t min_samp_avg;
+    uint8_t max_samp_avg;
+    uint8_t init_int_time;
+    uint8_t min_int_time;
+    uint8_t max_int_time;
 };
 
 /** @brief 
  */
 struct max32664c_data {
-    max32664c_raw_t raw;                /**<  */
-    max32664c_report_t report;          /**<  */
-    max32664c_algo_config_t algo_conf;  /**<  */
+    struct max32664c_raw_t raw;                 /**<  */
+    struct max32664c_report_t report;           /**<  */
+    struct max32664c_ext_report_t ext_report;   /**<  */
+    struct max32664c_algo_config_t algo_conf;   /**<  */
 
     uint32_t samples_led_ir[128];
     uint32_t samples_led_red[128];
 
-    uint8_t op_mode;                    /**< Current device mode */
+    enum max32664c_device_mode op_mode;         /**< Current device mode */
 
-    uint8_t calib_vector[824];
-
-    uint8_t motion_time;                /**< Motion time in milliseconds */
-    uint8_t motion_threshold;           /**< Motion threshold in milli-g */
+    uint8_t motion_time;                        /**< Motion time in milliseconds */
+    uint8_t motion_threshold;                   /**< Motion threshold in milli-g */
 
     uint8_t afe_id;
     uint8_t accel_id;
@@ -184,7 +196,7 @@ struct max32664c_data {
 
     struct k_msgq raw_queue;
     struct k_msgq report_queue;
-    struct k_msgq config_queue;
+    struct k_msgq ext_report_queue;
 };
 
 /** @brief      
