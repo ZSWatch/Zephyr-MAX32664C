@@ -9,7 +9,7 @@
 
 #include "max32664c.h"
 
-static uint8_t max32664_buffer[(32 * (sizeof(max32664c_raw_t) + sizeof(max32664c_report_t))) + 1];
+static uint8_t max32664_buffer[(32 * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t))) + 1];
 
 LOG_MODULE_REGISTER(maxim_max32664c_worker, CONFIG_MAXIM_MAX32664C_LOG_LEVEL);
 
@@ -59,7 +59,7 @@ static int max32664c_get_fifo_count(const struct device *dev, uint8_t *fifo)
  *  @param dev          Pointer to device
  *  @param algo_config  Pointer to algorithm configuration
  */
-static int max32664c_set_algo_config(const struct device *dev, max32664c_algo_config_t *algo_config)
+static int max32664c_set_algo_config(const struct device *dev, struct max32664c_algo_config_t *algo_config)
 {
     uint8_t tx[5];
     uint8_t rx;
@@ -107,6 +107,19 @@ static int max32664c_set_algo_config(const struct device *dev, max32664c_algo_co
     return 0;
 }
 
+/** @brief      Worker thread to read the sensor hub.
+ *              This thread does the following:
+ *                  - It polls the sensor hub periodically for new results
+ *                  - If new messages are available it reads the number of samples
+ *                  - Then it reads all the samples to clear the FIFO.
+ *                    It's neccessary to clear the complete FIFO because the sensor hub 
+ *                    doesn´t support the reading of a single message and not clearing 
+ *                    the FIFO can cause a FIFO overrun.
+ *                  - Extract the message data from the FIRST item from the FIFO and 
+ *                    copy them into the right message structure
+ *                  - Put the message into a message queue
+ *  @param dev  Pointer to device
+ */
 void max32664c_worker(const struct device *dev)
 {
     uint8_t fifo;
@@ -115,15 +128,6 @@ void max32664c_worker(const struct device *dev)
 
     while (data->threadRunning)
     {
-        max32664c_algo_config_t algo_config;
-
-        /* Configure the algorithm */
-        if (k_msgq_get(&data->config_queue, &algo_config, K_MSEC(0)) == 0) {
-            if (max32664c_set_algo_config(dev, &algo_config)) {
-                // TODO
-            }
-        }
-
         if (max32664c_get_hub_status(dev, &status)) {
             // TODO
         }
@@ -134,12 +138,12 @@ void max32664c_worker(const struct device *dev)
             max32664c_get_fifo_count(dev, &fifo);
 
             if (data->op_mode == MAX32664C_OP_MODE_RAW) {
-                max32664c_raw_t raw_data;
+                struct max32664c_raw_t raw_data;
 
                 /* Get all samples to clear the FIFO */
                 tx[0] = 0x12;
                 tx[1] = 0x01;
-                max32664c_i2c_transmit(dev, tx, 2, max32664_buffer, fifo * sizeof(max32664c_raw_t) + 1, MAX32664C_DEFAULT_CMD_DELAY);
+                max32664c_i2c_transmit(dev, tx, 2, max32664_buffer, fifo * sizeof(struct max32664c_raw_t) + 1, MAX32664C_DEFAULT_CMD_DELAY);
 
                 if (max32664_buffer[0] == 0) {
                     raw_data.acc.x = ((int16_t)(max32664_buffer[19]) << 8) | max32664_buffer[20];
@@ -153,13 +157,13 @@ void max32664c_worker(const struct device *dev)
                     LOG_ERR("Can not read raw data! Status: 0x%X", max32664_buffer[0]);
                 }
             } else if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC) || (data->op_mode == MAX32664C_OP_MODE_ALGO_AGC)) {
-                max32664c_raw_t raw_data;
-                max32664c_report_t report_data;
+                struct max32664c_raw_t raw_data;
+                struct max32664c_report_t report_data;
 
                 /* Get all samples to clear the FIFO */
                 tx[0] = 0x12;
                 tx[1] = 0x01;
-                max32664c_i2c_transmit(dev, tx, 2, max32664_buffer, (fifo * (sizeof(max32664c_raw_t) + sizeof(max32664c_report_t))) + 1, MAX32664C_DEFAULT_CMD_DELAY);
+                max32664c_i2c_transmit(dev, tx, 2, max32664_buffer, (fifo * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t))) + 1, MAX32664C_DEFAULT_CMD_DELAY);
 
                 if (max32664_buffer[0] == 0) {
                     raw_data.acc.x = ((int16_t)(max32664_buffer[19]) << 8) | max32664_buffer[20];
@@ -173,7 +177,7 @@ void max32664c_worker(const struct device *dev)
                     report_data.rr_confidence = max32664_buffer[31];
                     report_data.activity_class = max32664_buffer[32];
                     report_data.r = (((uint16_t)(max32664_buffer[33]) << 8) | max32664_buffer[34]) / 1000;
-                    report_data.sp02_confidence = max32664_buffer[35];
+                    report_data.spo2_confidence = max32664_buffer[35];
                     report_data.spo2 = (((uint16_t)(max32664_buffer[36]) << 8) | max32664_buffer[37]) / 10;
                     report_data.spo2_complete = max32664_buffer[38];
                     report_data.spo2_low_signal_quality = max32664_buffer[39];
@@ -194,7 +198,24 @@ void max32664c_worker(const struct device *dev)
                     LOG_ERR("Can not read report! Status: 0x%X", max32664_buffer[0]);
                 }
             }
-        } else {
+#if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+            else if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC_EXT) || (data->op_mode == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
+                struct max32664c_raw_t raw_data;
+                struct max32664c_ext_report_t report_data;
+
+                /* Get all samples to clear the FIFO */
+                tx[0] = 0x12;
+                tx[1] = 0x01;
+                max32664c_i2c_transmit(dev, tx, 2, max32664_buffer, (fifo * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_ext_report_t))) + 1, MAX32664C_DEFAULT_CMD_DELAY);
+
+                if (max32664_buffer[0] == 0) {
+                } else {
+                    LOG_ERR("Can not read report! Status: 0x%X", max32664_buffer[0]);
+                }
+            }
+#endif
+        }
+        else {
             LOG_WRN("No data ready! Status: 0x%X", max32664_buffer[0]);
         }
 
