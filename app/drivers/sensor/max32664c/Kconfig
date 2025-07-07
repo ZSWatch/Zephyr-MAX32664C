@@ -13,6 +13,14 @@ config SENSOR_MAX32664C
         Enable the driver for the MAX32664C sensor hub.
 
 if SENSOR_MAX32664C
+    config MAX32664C_USE_EXTERNAL_ACC
+        bool "Enable this option if you want to use an external accelerometer"
+        default n
+
+    config MAX32664C_USE_EXTENDED_REPORTS
+        bool "Enable this option if you want to use extended reports"
+        default n
+
     config MAX32664C_USE_STATIC_MEMORY
         bool "Enable this option if you don't want to use dynamic memory"
         default y

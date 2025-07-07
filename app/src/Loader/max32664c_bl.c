@@ -14,7 +14,7 @@
 #define MAX32664C_FW_PAGE_SIZE          8192
 #define MAX32664C_FW_UPDATE_CRC_SIZE    16
 #define MAX32664C_FW_UPDATE_WRITE_SIZE  (MAX32664C_FW_PAGE_SIZE + MAX32664C_FW_UPDATE_CRC_SIZE)
-#define MAX32664C_DEFAULT_CMD_DELAY     10
+#define MAX32664C_DEFAULT_CMD_DELAY_MS  10
 #define MAX32664C_PAGE_WRITE_DELAY_MS   680
 
 struct max32664c_config
@@ -48,13 +48,13 @@ static int max32664c_bl_i2c_transmit(const struct device *dev, uint8_t* tx_buf, 
         LOG_ERR("I2C transmission error %d!", err);
         return err;
     }
-    k_sleep(K_MSEC(MAX32664C_DEFAULT_CMD_DELAY));
+    k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
     err = i2c_read_dt(&config->i2c, rx_buf, rx_len);
     if (err) {
         LOG_ERR("I2C transmission error %d!", err);
         return err;
     }
-    k_sleep(K_MSEC(MAX32664C_DEFAULT_CMD_DELAY));
+    k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
 
     /* Check the status byte for a valid transaction */
     LOG_DBG("Status: %u", rx_buf[0]);
@@ -79,14 +79,14 @@ static int max32664c_app_i2c_read(const struct device *dev,uint8_t family, uint8
     uint8_t tx_buf[] = {family, index};
     const struct max32664c_config *config = dev->config;
 
-    /* Wake the sensor hub before starting an I2C read (see page 17 of the user guide) */
+    /* Wake the sensor hub before starting an I2C read (see page 17 of the user Guide) */
     gpio_pin_set_dt(&config->mfio_gpio, false);
-    k_sleep(K_USEC(300));
+    k_usleep(300);
 
     i2c_write_dt(&config->i2c, tx_buf, sizeof(tx_buf));
-    k_sleep(K_MSEC(MAX32664C_DEFAULT_CMD_DELAY));
+    k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
     i2c_read_dt(&config->i2c, rx_buf, rx_len);
-    k_sleep(K_MSEC(MAX32664C_DEFAULT_CMD_DELAY));
+    k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
 
     gpio_pin_set_dt(&config->mfio_gpio, true);
 
@@ -107,7 +107,7 @@ static int max32664c_app_i2c_read(const struct device *dev,uint8_t family, uint8
 static int max32664c_bl_write_page(const struct device *dev, const uint8_t *data, uint32_t offset)
 {
     int err;
-    uint8_t rx_buf = 0;
+    uint8_t rx_buf;
     uint8_t* tx_buf;
     const struct max32664c_config *config = dev->config;
 
@@ -116,7 +116,11 @@ static int max32664c_bl_write_page(const struct device *dev, const uint8_t *data
     if (tx_buf == NULL) {
         return -ENOMEM;
     }
+
+    /* Copy the data for one page into the buffer but leave space for the two command bytes */
     memcpy(&tx_buf[2], &data[offset], MAX32664C_FW_UPDATE_WRITE_SIZE);
+
+    /* Set the two command bytes */
     tx_buf[0] = 0x80;
     tx_buf[1] = 0x04;
 
@@ -124,14 +128,14 @@ static int max32664c_bl_write_page(const struct device *dev, const uint8_t *data
         err = -EINVAL;
         goto max32664c_bl_write_page_exit;
     };
-    k_sleep(K_MSEC(MAX32664C_PAGE_WRITE_DELAY_MS));
+    k_msleep(MAX32664C_PAGE_WRITE_DELAY_MS);
     err = i2c_read_dt(&config->i2c, &rx_buf, 1);
     if (err) {
         LOG_ERR("I2C read error %d!", err);
         err = -EINVAL;
         goto max32664c_bl_write_page_exit;
     };
-    k_sleep(K_MSEC(MAX32664C_DEFAULT_CMD_DELAY));
+    k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
 
     err = rx_buf;
 
@@ -149,20 +153,20 @@ max32664c_bl_write_page_exit:
 static int max32664c_bl_erase_app(const struct device *dev)
 {
     uint8_t tx_buf[2] = {0x80, 0x03};
-    uint8_t rx_buf = {0};
+    uint8_t rx_buf;
     const struct max32664c_config *config = dev->config;
 
     if (i2c_write_dt(&config->i2c, tx_buf, sizeof(tx_buf))) {
         return -EINVAL;
     };
 
-    k_sleep(K_MSEC(1500));
+    k_msleep(1500);
 
     if (i2c_read_dt(&config->i2c, &rx_buf, sizeof(rx_buf))) {
         return -EINVAL;
     };
 
-    k_sleep(K_MSEC(MAX32664C_DEFAULT_CMD_DELAY));
+    k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
 
     /* Check the status byte for a valid transaction */
     if (rx_buf != 0) {
@@ -181,11 +185,11 @@ static int max32664c_bl_erase_app(const struct device *dev)
 */
 static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmware, uint32_t size)
 {
-    uint8_t rx_buf = {0};
+    uint8_t rx_buf;
     uint8_t tx_buf[18] = {0};
     uint32_t page_offset;
 
-    /* Get the number of pages (see user manual page 53) */
+    /* Get the number of pages from the firmware file (see User Guide page 53) */
     uint8_t num_pages = firmware[0x44];
 
     LOG_INF("Loading firmware...");
@@ -206,6 +210,7 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
         return -EINVAL;
     }
 
+    /* Get the initialization and authentication vectors from the firmware (see User Guide page 53) */
     memcpy(max32664c_fw_init_vector, &firmware[0x28], sizeof(max32664c_fw_init_vector));
     memcpy(max32664c_fw_auth_vector, &firmware[0x34], sizeof(max32664c_fw_auth_vector));
 
@@ -241,7 +246,7 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
         return -EINVAL;
     }
 
-    /* Write the firmware */
+    /* Write the new firmware */
     LOG_INF("\tWriting new firmware...");
     page_offset = 0x4C;
     for (uint8_t i = 0; i < num_pages; i++)
@@ -253,7 +258,7 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
         status = max32664c_bl_write_page(dev, firmware, page_offset);
         LOG_INF("\t\tStatus: %u", status);
         if (status != 0) {
-
+            return -EINVAL;
         }
 
         page_offset += MAX32664C_FW_UPDATE_WRITE_SIZE;
@@ -276,13 +281,13 @@ int max32664c_bl_enter(const struct device *dev, const uint8_t *firmware, uint32
     /* Put the processor into bootloader mode */
     LOG_INF("Entering bootloader mode");
     gpio_pin_set_dt(&config->reset_gpio, false);
-    k_sleep(K_MSEC(20));
+    k_msleep(20);
 
     gpio_pin_set_dt(&config->mfio_gpio, false);
-    k_sleep(K_MSEC(20));
+    k_msleep(20);
 
     gpio_pin_set_dt(&config->reset_gpio, true);
-    k_sleep(K_MSEC(200));
+    k_msleep(200);
 
     /* Set bootloader mode */
     tx_buf[0] = 0x01;
@@ -338,17 +343,16 @@ int max32664c_bl_leave(const struct device *dev)
     LOG_INF("Entering app mode");
     gpio_pin_set_dt(&config->reset_gpio, true);
     gpio_pin_set_dt(&config->mfio_gpio, false);
-    k_sleep(K_MSEC(2000));
+    k_msleep(2000);
+
     gpio_pin_set_dt(&config->reset_gpio, false);
-    k_sleep(K_MSEC(5));
+    k_msleep(5);
 
     gpio_pin_set_dt(&config->mfio_gpio, true);
-    k_sleep(K_MSEC(15));
+    k_msleep(15);
 
     gpio_pin_set_dt(&config->reset_gpio, true);
-    k_sleep(K_MSEC(50));
-
-    k_sleep(K_MSEC(1600));
+    k_msleep(1700);
 
     /* Read the device mode */
     if (max32664c_app_i2c_read(dev, 0x02, 0x00, rx_buf, 2)) {
@@ -361,7 +365,7 @@ int max32664c_bl_leave(const struct device *dev)
         return -EINVAL;
     }
 
-    /* Read the MCU type version */
+    /* Read the MCU type */
     if (max32664c_app_i2c_read(dev, 0xFF, 0x00, rx_buf, 2)) {
         return -EINVAL;
     }

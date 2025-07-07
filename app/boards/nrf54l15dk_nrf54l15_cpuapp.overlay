@@ -1,19 +1,19 @@
 &pinctrl {
-	i2c30_default: i2c30_default {
-		group1 {
-			psels = <NRF_PSEL(TWIM_SDA, 0, 4)>,
-				<NRF_PSEL(TWIM_SCL, 0, 3)>;
-            bias-pull-up;
-		};
-	};
+    i2c30_default: i2c30_default {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 4)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 3)>;
+                    bias-pull-up;
+        };
+    };
 
-	i2c30_sleep: i2c30_sleep {
-		group1 {
-			psels = <NRF_PSEL(TWIM_SDA, 0, 4)>,
-				<NRF_PSEL(TWIM_SCL, 0, 3)>;
-			low-power-enable;
-		};
-	};
+    i2c30_sleep: i2c30_sleep {
+        group1 {
+            psels = <NRF_PSEL(TWIM_SDA, 0, 4)>,
+                    <NRF_PSEL(TWIM_SCL, 0, 3)>;
+                    low-power-enable;
+        };
+    };
 };
 
 
@@ -35,7 +35,7 @@
     clock-frequency = <I2C_BITRATE_FAST>;
     zephyr,flash-buf-max-size = <8250>;
     pinctrl-0 = <&i2c30_default>;
-	pinctrl-1 = <&i2c30_sleep>;
+    pinctrl-1 = <&i2c30_sleep>;
     pinctrl-names = "default", "sleep";
     biometric_hub: max32664c@55 {
         compatible = "maxim,max32664c";
@@ -49,14 +49,14 @@
 };
 
 &gpio2 {
-	status = "okay";
+    status = "okay";
 
-	vled {
-		gpio-hog;
-		gpios = <6 GPIO_ACTIVE_HIGH>;
-		/* low output to select on-board codec control */
-		output-high;
-	};
+    vled {
+        gpio-hog;
+        gpios = <6 GPIO_ACTIVE_HIGH>;
+        /* low output to select on-board codec control */
+        output-high;
+    };
 };
 
 &dppic10 {
