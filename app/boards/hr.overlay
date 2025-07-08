@@ -20,5 +20,7 @@
         mfio-gpios = <&gpio1 9 GPIO_ACTIVE_HIGH>;
         motion-time = <200>;
         motion-threshold = <500>;
+        hr-config = [00, 73];
+        spo2-config = [10, 20];
     };
 };

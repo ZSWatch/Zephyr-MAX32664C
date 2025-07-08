@@ -1,0 +1,137 @@
+description: |
+    The MAX32664 is a ultra-low power biometric sensor hub.
+
+    See more info at:
+    https://www.analog.com/media/en/technical-documentation/data-sheets/MAX32664.pdf
+    https://www.analog.com/media/en/technical-documentation/user-guides/measuring-spo2-and-heart-rate-using-max32664c.pdf
+
+compatible: "maxim,max32664c"
+
+include: [sensor-device.yaml, i2c-device.yaml]
+
+properties:
+    reset-gpios:
+      type: phandle-array
+      required: true
+      description:
+        External System Reset (Active-Low) Input.
+
+    mfio-gpios:
+      type: phandle-array
+      required: true
+      description:
+        MFIO asserts low as an output when the sensor hub needs to
+        communication with the host; MFIO acts as an input and when held
+        low during a reset, the sensor hub enters bootloader mode.
+
+    motion-time:
+      type: int
+      default: 200
+      description:
+        Sensor Hub configuration - Motion activation time in milliseconds.
+        The default corresponds to Table 12 in the HR and SpO2 User guide.
+
+    motion-threshold:
+      type: int
+      default: 500
+      description:
+        Sensor Hub configuration - Motion activation time in milli-g.
+        The default corresponds to Table 12 in the HR and SpO2 User guide.
+
+    spo2-calib:
+      type: array
+      default: [0xFFE69196, 0x000CB735, 0x00989680]
+      description:
+        Algorithm configuration - SpO2 calibration coefficients.
+        The default corresponds to Table 12 in the HR and SpO2 User guide.
+
+    min-int-time:
+      type: int
+      default: 14
+      enum:
+        - 14
+        - 29
+        - 58
+        - 117
+      description:
+        Algorithm configuration - Minimum integration time.
+        The default corresponds to Table 11 in the HR and SpO2 User guide.
+
+    min-samp-avg:
+      type: string
+      default: 25-1
+      enum:
+        - 25-1
+        - 50-2
+        - 100-4
+        - 200-8
+        - 400-16
+      description:
+        Algorithm configuration - Minimum sampling rate and averaging.
+        The default corresponds to Table 11 in the HR and SpO2 User guide.
+
+    max-int-time:
+      type: int
+      default: 117
+      enum:
+        - 14
+        - 29
+        - 58
+        - 117
+      description:
+        Algorithm configuration - Maximum integration time.
+        The default corresponds to Table 11 in the HR and SpO2 User guide.
+
+    max-samp-avg:
+      type: string
+      default: 100-4
+      enum:
+        - 25-1
+        - 50-2
+        - 100-4
+        - 200-8
+        - 400-16
+      description:
+        Algorithm configuration - Maximum sampling rate and averaging.
+        The default corresponds to Table 11 in the HR and SpO2 User guide.
+
+    init-int-time:
+      type: int
+      default: 117
+      enum:
+        - 14
+        - 29
+        - 58
+        - 117
+      description:
+        Algorithm configuration - Initial integration time.
+        The default corresponds to Table 11 in the HR and SpO2 User guide.
+
+    init-samp-avg:
+      type: string
+      default: 100-4
+      enum:
+        - 25-1
+        - 50-2
+        - 100-4
+        - 200-8
+        - 400-16
+      description:
+        Algorithm configuration - Initial sampling rate and averaging.
+        The default corresponds to Table 11 in the HR and SpO2 User guide.
+
+    hr-config:
+      type: uint8-array
+      default: [00, 73]
+      description: 
+        Algorithm configuration - LED and PD configuration for the heartrate measurement.
+        The first entry configures channel 1, the second channel 2.
+        The default corresponds to Table 11 in the HR and SpO2 User guide.
+
+    spo2-config:
+      type: uint8-array
+      default: [10, 20]
+      description: 
+        Algorithm configuration - LED and PD configuration for the SpO2 measurement.
+        The first entry configures the IR channel, the second the red channel.
+        The default corresponds to Table 11 in the HR and SpO2 User guide.
