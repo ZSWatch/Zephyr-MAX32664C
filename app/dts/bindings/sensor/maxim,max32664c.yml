@@ -122,11 +122,11 @@ properties:
 
     hr-config:
       type: uint8-array
-      default: [00, 73]
+      default: [00, 01]
       description: 
         Algorithm configuration - LED and PD configuration for the heartrate measurement.
         The first entry configures channel 1, the second channel 2.
-        The default corresponds to Table 11 in the HR and SpO2 User guide.
+        The default corresponds to Table 15 in the HR and SpO2 User guide.
 
     spo2-config:
       type: uint8-array
@@ -134,4 +134,4 @@ properties:
       description: 
         Algorithm configuration - LED and PD configuration for the SpO2 measurement.
         The first entry configures the IR channel, the second the red channel.
-        The default corresponds to Table 11 in the HR and SpO2 User guide.
+        The default corresponds to Table 15 in the HR and SpO2 User guide.

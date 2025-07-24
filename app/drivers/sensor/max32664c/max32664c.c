@@ -392,7 +392,7 @@ static int max32664c_set_mode_wake_on_motion(const struct device *dev)
     tx[0] = 0x46;
     tx[1] = 0x04;
     tx[2] = 0x00;
-    tx[3] = MAX32664C_MOTION_ENABLE;
+    tx[3] = 0x01;
     tx[4] = MAX32664C_MOTION_TIME(data->motion_time);
     tx[5] = MAX32664C_MOTION_THRESHOLD(data->motion_threshold);
     if (max32664c_i2c_transmit(dev, tx, 6, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
@@ -486,30 +486,6 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
         return -EINVAL;
     }
 
-    /* Configure WHRM */
-    tx[0] = 0x50;
-    tx[1] = 0x07;
-    tx[2] = 0x17;
-    //tx[3] = config->hr_config[0];
-    //tx[4] = config->hr_config[1];
-    tx[3] = 0;
-    tx[4] = 0x73;
-    if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        LOG_ERR("Can not configure WHRM!");
-        return -EINVAL;
-    }
-
-    /* Configure SpO2 */
-    tx[0] = 0x50;
-    tx[1] = 0x07;
-    tx[2] = 0x18;
-    tx[3] = config->spo2_config[0];
-    tx[4] = config->spo2_config[1];
-    if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        LOG_ERR("Can not configure SpO2!");
-        return -EINVAL;
-    }
-
     if (device_mode == MAX32664C_OP_MODE_ALGO_AEC) {
         LOG_DBG("Entering AEC mode...");
 
@@ -583,6 +559,28 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
         }
     } else {
         LOG_ERR("Invalid mode!");
+        return -EINVAL;
+    }
+
+    /* Configure WHRM */
+    tx[0] = 0x50;
+    tx[1] = 0x07;
+    tx[2] = 0x17;
+    tx[3] = config->hr_config[0];
+    tx[4] = config->hr_config[1];
+    if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+        LOG_ERR("Can not configure WHRM!");
+        return -EINVAL;
+    }
+
+    /* Configure SpO2 */
+    tx[0] = 0x50;
+    tx[1] = 0x07;
+    tx[2] = 0x18;
+    tx[3] = config->spo2_config[0];
+    tx[4] = config->spo2_config[1];
+    if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+        LOG_ERR("Can not configure SpO2!");
         return -EINVAL;
     }
 
@@ -712,19 +710,19 @@ static int max32664c_channel_get(const struct device *dev,
             val->val2 = data->raw.PPG4;
             break;
         }
-        case SENSOR_CHAN_HEALTH_HEARTRATE:
+        case SENSOR_CHAN_HEARTRATE:
         {
             val->val1 = data->report.hr;
             val->val2 = data->report.hr_confidence;
             break;
         }
-        case SENSOR_CHAN_HEALTH_RR:
+        case SENSOR_CHAN_RR:
         {
             val->val1 = data->report.rr;
             val->val2 = data->report.rr_confidence;
             break;
         }
-        case SENSOR_CHAN_HEALTH_SPO2:
+        case SENSOR_CHAN_BLOOD_OXYGEN_SATURATION:
         {
             val->val1 = data->report.spo2;
             val->val2 = data->report.spo2_confidence;
@@ -747,8 +745,8 @@ static int max32664c_attr_set(const struct device *dev,
 {
     struct max32664c_data *data = dev->data;
 
-    if ((chan != SENSOR_CHAN_HEALTH_HEARTRATE) && (chan != SENSOR_CHAN_HEALTH_SPO2) &&
-        (chan != SENSOR_CHAN_HEALTH_RR) && (chan != SENSOR_CHAN_ACCEL_X) &&
+    if ((chan != SENSOR_CHAN_HEARTRATE) && (chan != SENSOR_CHAN_BLOOD_OXYGEN_SATURATION) &&
+        (chan != SENSOR_CHAN_RR) && (chan != SENSOR_CHAN_ACCEL_X) &&
         (chan != SENSOR_CHAN_ACCEL_Z) && (chan != SENSOR_CHAN_ACCEL_Y) &&
         (chan != SENSOR_CHAN_RED) && (chan != SENSOR_CHAN_GREEN) &&
         (chan != SENSOR_CHAN_IR) && (chan != SENSOR_CHAN_ALL)) {
@@ -789,6 +787,10 @@ static int max32664c_attr_set(const struct device *dev,
         case SENSOR_ATTR_SLOPE_TH:
         {
             data->motion_threshold = val->val1;
+            break;
+        }
+        case SENSOR_ATTR_CONFIGURATION:
+        {
             break;
         }
         case SENSOR_ATTR_OP_MODE:
@@ -866,8 +868,8 @@ static int max32664c_attr_get(const struct device *dev,
 {
     struct max32664c_data *data = dev->data;
 
-    if ((chan != SENSOR_CHAN_HEALTH_HEARTRATE) && (chan != SENSOR_CHAN_HEALTH_SPO2) &&
-        (chan != SENSOR_CHAN_HEALTH_RR) && (chan != SENSOR_CHAN_ACCEL_X) &&
+    if ((chan != SENSOR_CHAN_HEARTRATE) && (chan != SENSOR_CHAN_BLOOD_OXYGEN_SATURATION) &&
+        (chan != SENSOR_CHAN_RR) && (chan != SENSOR_CHAN_ACCEL_X) &&
         (chan != SENSOR_CHAN_ACCEL_Z) && (chan != SENSOR_CHAN_ACCEL_Y) &&
         (chan != SENSOR_CHAN_RED) && (chan != SENSOR_CHAN_GREEN) &&
         (chan != SENSOR_CHAN_IR) && (chan != SENSOR_CHAN_ALL)) {
