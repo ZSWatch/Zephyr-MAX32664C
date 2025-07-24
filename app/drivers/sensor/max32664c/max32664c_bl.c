@@ -6,7 +6,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+
 #include <zephyr/kernel.h>
+#include <zephyr/drivers/i2c.h>
+#include <zephyr/drivers/gpio.h>
+#include <zephyr/sys/byteorder.h>
 #include <zephyr/logging/log.h>
 
 #include "max32664c_bl.h"

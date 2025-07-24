@@ -31,7 +31,7 @@ LOG_MODULE_REGISTER(maxim_max32664c, CONFIG_MAXIM_MAX32664C_LOG_LEVEL);
     static uint8_t max32664c_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t))];
 
     #if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
-    static uint8_t max32664c_ext_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_ext_report_t))];
+        static uint8_t max32664c_ext_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_ext_report_t))];
     #endif
 #endif
 
@@ -51,16 +51,16 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx
 {
     const struct max32664c_config *config = dev->config;
 
-    /* Wake up the sensor hub before the transmission starts. */
+    /* Wake up the sensor hub before the transmission starts */
     gpio_pin_set_dt(&config->mfio_gpio, false);
-    k_sleep(K_USEC(500));
+    k_msleep(500);
 
     if (i2c_write_dt(&config->i2c, tx_buf, tx_len)) {
         LOG_ERR("I2C transmission error!");
         return -EBUSY;
     }
 
-    k_sleep(K_MSEC(delay_ms));
+    k_msleep(delay_ms);
 
     if (i2c_read_dt(&config->i2c, rx_buf, rx_len)) {
         LOG_ERR("I2C read error!");
@@ -69,9 +69,9 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx
 
     k_sleep(K_MSEC(MAX32664C_DEFAULT_CMD_DELAY));
 
-    /* The sensor hub can enter sleep mode again now. */
+    /* The sensor hub can enter sleep mode again now */
     gpio_pin_set_dt(&config->mfio_gpio, true);
-    k_sleep(K_USEC(300));
+    k_usleep(300);
 
     /* Check the status byte for a valid transaction */
     if (rx_buf[0] != 0) {
@@ -222,29 +222,29 @@ static int max32664c_set_mode_raw(const struct device *dev)
         return -EINVAL;
     }
 
-    /* Set LED1 current */
+    /* Set LED1 (Green) current */
     tx[0] = 0x40;
     tx[1] = 0x00;
     tx[2] = 0x23;
-    tx[3] = 0x7F;
+    tx[3] = data->led_current[0];
     if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
         return -EINVAL;
     }
 
-    /* Set LED2 current */
+    /* Set LED2 (IR) current */
     tx[0] = 0x40;
     tx[1] = 0x00;
     tx[2] = 0x24;
-    tx[3] = 0x7F;
+    tx[3] = data->led_current[1];
     if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
         return -EINVAL;
     }
 
-    /* Set LED3 current */
+    /* Set LED3 (Red) current */
     tx[0] = 0x40;
     tx[1] = 0x00;
     tx[2] = 0x25;
-    tx[3] = 0x7F;
+    tx[3] = data->led_current[2];
     if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
         return -EINVAL;
     }
@@ -291,7 +291,7 @@ static int max32664c_disable_sensors(const struct device *dev)
     return 0;
 }
 
-// TODO: ENable needed
+// TODO: Enable needed
 static int max32664c_stop_algo(const struct device *dev)
 {
     uint8_t rx;
@@ -791,6 +791,28 @@ static int max32664c_attr_set(const struct device *dev,
         }
         case SENSOR_ATTR_CONFIGURATION:
         {
+            switch (chan)
+            {
+                case SENSOR_CHAN_GREEN:
+                {
+                    data->led_current[0] = val->val1 & 0xFF;
+                    break;
+                }
+                case SENSOR_CHAN_RED:
+                {
+                    data->led_current[1] = val->val1 & 0xFF;
+                    break;
+                }
+                case SENSOR_CHAN_IR:
+                {
+                    data->led_current[2] = val->val1 & 0xFF;
+                    break;
+                }
+                default:
+                {
+                    return -ENOTSUP;
+                }
+            }
             break;
         }
         case SENSOR_ATTR_OP_MODE:
@@ -886,8 +908,28 @@ static int max32664c_attr_get(const struct device *dev,
         }
         case SENSOR_ATTR_CONFIGURATION:
         {
-            val->val1 = data->afe_id;
-            val->val2 = data->accel_id;
+            switch (chan)
+            {
+                case SENSOR_CHAN_GREEN:
+                {
+                    val->val1 = data->led_current[0];
+                    break;
+                }
+                case SENSOR_CHAN_RED:
+                {
+                    val->val1 = data->led_current[1];
+                    break;
+                }
+                case SENSOR_CHAN_IR:
+                {
+                    val->val1 = data->led_current[2];
+                    break;
+                }
+                default:
+                {
+                    return -ENOTSUP;
+                }
+            }
             break;
         }
         default:
@@ -926,6 +968,7 @@ static int max32664c_init(const struct device *dev)
 
     data->motion_time = config->motion_time;
     data->motion_threshold = config->motion_threshold;
+    memcpy(data->led_current, config->led_current, sizeof(data->led_current));
 
     gpio_pin_configure_dt(&config->reset_gpio, GPIO_OUTPUT);
     gpio_pin_configure_dt(&config->mfio_gpio, GPIO_OUTPUT);
@@ -1049,6 +1092,7 @@ static int max32664c_pm_action(const struct device *dev,
         .spo2_config = DT_INST_PROP(inst, spo2_config),                         \
         .motion_time = DT_INST_PROP(inst, motion_time),                         \
         .motion_threshold = DT_INST_PROP(inst, motion_threshold),               \
+        .led_current = DT_INST_PROP(inst, led_current),                         \
     };                                                                          \
                                                                                 \
     PM_DEVICE_DT_INST_DEFINE(inst, max32664c_pm_action);                        \
