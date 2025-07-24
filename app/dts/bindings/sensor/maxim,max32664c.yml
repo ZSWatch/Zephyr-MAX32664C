@@ -1,6 +1,18 @@
 description: |
     The MAX32664 is a ultra-low power biometric sensor hub.
 
+    NOTES:
+
+    This driver is primarily written to work with a MAX86141. Other sensors can be used but they are untested!
+    The driver supports up to two photodetectors (PDs) and three LEDs fix. It requires a specific LED 
+    configuration for the MAX86141.
+      LED1 -> Green
+      LED2 -> IR
+      LED3 -> Red
+    The LEDs can be changed manually but this may require changes in the driver.
+
+    This driver is tested with Sensor Hub firmware 30.13.31 and an external Accelerometer (e.g. LIS2DH12).
+
     See more info at:
     https://www.analog.com/media/en/technical-documentation/data-sheets/MAX32664.pdf
     https://www.analog.com/media/en/technical-documentation/user-guides/measuring-spo2-and-heart-rate-using-max32664c.pdf
@@ -120,6 +132,14 @@ properties:
         Algorithm configuration - Initial sampling rate and averaging.
         The default corresponds to Table 11 in the HR and SpO2 User guide.
 
+    led-current:
+      type: uint8-array
+      default: [0x7F, 0x7F, 0x7F]
+      description:
+        Initial LED current configuration in mA. The current can also be 
+        changed later by the firmware. Index 0 corresponds to LED1,
+        index 1 to LED2, and index 2 to LED3.
+  
     hr-config:
       type: uint8-array
       default: [00, 01]

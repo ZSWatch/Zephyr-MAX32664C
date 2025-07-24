@@ -6,8 +6,5 @@ project(HR)
 add_subdirectory(drivers)
 
 target_include_directories(app PRIVATE src/firmware)
-target_include_directories(app PRIVATE src/Loader)
 
-target_sources(app PRIVATE src/main.c
-                            src/Loader/max32664c_bl.c)
-                            
+target_sources(app PRIVATE src/main.c)

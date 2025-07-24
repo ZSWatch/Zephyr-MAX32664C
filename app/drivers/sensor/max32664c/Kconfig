@@ -13,6 +13,10 @@ config SENSOR_MAX32664C
         Enable the driver for the MAX32664C sensor hub.
 
 if SENSOR_MAX32664C
+    config MAX32664C_USE_FIRMWARE_LOADER
+        bool "Enable this option if you want to use the I2C firmware loader"
+        default n
+
     config MAX32664C_USE_EXTERNAL_ACC
         bool "Enable this option if you want to use an external accelerometer"
         default n

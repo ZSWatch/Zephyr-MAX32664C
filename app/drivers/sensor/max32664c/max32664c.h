@@ -20,9 +20,6 @@
 #define SENSOR_CHAN_BLOOD_OXYGEN_SATURATION (SENSOR_CHAN_PRIV_START + 2)
 #define SENSOR_CHAN_RR                      (SENSOR_CHAN_PRIV_START + 3)
 
-#define MAX32664C_MOTION_TIME(ms)       ((uint8_t)((ms * 25UL) / 1000))
-#define MAX32664C_MOTION_THRESHOLD(mg)  ((uint8_t)((mg * 16UL) / 1000))
-
 #define MAX32664C_BIT_STATUS_COMM_ERR   0
 #define MAX32664C_BIT_STATUS_DATA_RDY   3
 #define MAX32664C_BIT_STATUS_OUT_OVFL   4
@@ -133,6 +130,8 @@ struct max32664c_config {
     uint8_t init_int_time;
     uint8_t min_int_time;
     uint8_t max_int_time;
+
+    uint8_t led_current[3];                     /**< Initial LED current in mA */
 };
 
 /** @brief 
@@ -143,13 +142,12 @@ struct max32664c_data {
     struct max32664c_ext_report_t ext_report;   /**<  */
     struct max32664c_algo_config_t algo_conf;   /**<  */
 
-    uint32_t samples_led_ir[128];
-    uint32_t samples_led_red[128];
-
     enum max32664c_device_mode op_mode;         /**< Current device mode */
 
     uint8_t motion_time;                        /**< Motion time in milliseconds */
     uint8_t motion_threshold;                   /**< Motion threshold in milli-g */
+
+    uint8_t led_current[3];                     /**< LED current in mA */
 
     uint8_t afe_id;
     uint8_t accel_id;
