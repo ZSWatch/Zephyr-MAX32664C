@@ -103,14 +103,6 @@ struct max32664c_report_t {
 struct max32664c_ext_report_t {
 } __attribute__((packed));
 
-/** @brief 
- */
-struct max32664c_algo_config_t {
-    uint16_t height;
-    uint16_t weight;
-    uint8_t age;
-    uint8_t gender;
-} __attribute__((packed));
 
 /** @brief 
  */
@@ -118,7 +110,6 @@ struct max32664c_config {
     struct i2c_dt_spec i2c;
     struct gpio_dt_spec reset_gpio;
     struct gpio_dt_spec mfio_gpio;
-    struct max32664c_algo_config_t algo_config;
     int32_t spo2_calib[3];
     uint16_t motion_time;
     uint16_t motion_threshold;
@@ -140,7 +131,6 @@ struct max32664c_data {
     struct max32664c_raw_t raw;                 /**<  */
     struct max32664c_report_t report;           /**<  */
     struct max32664c_ext_report_t ext_report;   /**<  */
-    struct max32664c_algo_config_t algo_conf;   /**<  */
 
     enum max32664c_device_mode op_mode;         /**< Current device mode */
 
