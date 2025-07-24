@@ -11,9 +11,9 @@
 #include <zephyr/bluetooth/services/bas.h>
 #include <zephyr/bluetooth/services/hrs.h>
 
-#include "Loader/max32664c_bl.h"
-#include "firmware/max32664c_kx122_z_32_9_23.h"
-#include "firmware/MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31.h"
+//#include "Loader/max32664c_bl.h"
+//#include "firmware/max32664c_kx122_z_32_9_23.h"
+//#include "firmware/MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31.h"
 
 #include "../drivers/sensor/max32664c/max32664c.h"
 
@@ -99,7 +99,7 @@ static void hrs_notify(void)
     struct sensor_value value;
 
     sensor_sample_fetch(sensor_hub);
-    sensor_attr_get(sensor_hub, SENSOR_CHAN_HEALTH_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
+    sensor_attr_get(sensor_hub, SENSOR_CHAN_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
     if (value.val1 == MAX32664C_OP_MODE_RAW) {
         struct sensor_value x;
         struct sensor_value y;
@@ -117,7 +117,7 @@ static void hrs_notify(void)
     } else if (value.val1 == MAX32664C_OP_MODE_ALGO_AEC) {
         struct sensor_value hr;
 
-        sensor_channel_get(sensor_hub, SENSOR_CHAN_HEALTH_HEARTRATE, &hr);
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_HEARTRATE, &hr);
         LOG_INF("HR: %u", hr.val1);
         LOG_INF("Confidence: %u", hr.val2);
 
@@ -169,7 +169,7 @@ int main(void)
     //value.val1 = MAX32664C_OP_MODE_RAW;
     value.val1 = MAX32664C_OP_MODE_ALGO_AEC;
     value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
-    sensor_attr_set(sensor_hub, SENSOR_CHAN_HEALTH_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
+    sensor_attr_set(sensor_hub, SENSOR_CHAN_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
 
     while(1)
     {
