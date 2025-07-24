@@ -743,6 +743,8 @@ static int max32664c_attr_set(const struct device *dev,
                               enum sensor_attribute attr,
                               const struct sensor_value *val)
 {
+    uint8_t tx[5];
+    uint8_t rx;
     struct max32664c_data *data = dev->data;
 
     if ((chan != SENSOR_CHAN_HEARTRATE) && (chan != SENSOR_CHAN_BLOOD_OXYGEN_SATURATION) &&
@@ -761,17 +763,43 @@ static int max32664c_attr_set(const struct device *dev,
         }
         case SENSOR_ATTR_HEIGHT:
         {
-            data->algo_conf.height = val->val1;
+            tx[0] = 0x50;
+            tx[1] = 0x07;
+            tx[2] = 0x06;
+            tx[3] = (val->val1 & 0xFF00) >> 8;
+            tx[4] = val->val1 & 0x00FF;
+            if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+                LOG_ERR("Can not set height");
+                return -EINVAL;
+            }
+
             break;
         }
         case SENSOR_ATTR_WEIGHT:
         {
-            data->algo_conf.weight = val->val1;
+            tx[0] = 0x50;
+            tx[1] = 0x07;
+            tx[2] = 0x07;
+            tx[3] = (val->val1 & 0xFF00) >> 8;
+            tx[4] = val->val1 & 0x00FF;
+            if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+                LOG_ERR("Can not set weight!");
+                return -EINVAL;
+            }
+
             break;
         }
         case SENSOR_ATTR_AGE:
         {
-            data->algo_conf.age = val->val1;
+            tx[0] = 0x50;
+            tx[1] = 0x07;
+            tx[2] = 0x08;
+            tx[3] = val->val1 & 0x00FF;
+            if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+                LOG_ERR("Can not set age!");
+                return -EINVAL;
+            }
+
             break;
         }
         case SENSOR_ATTR_GENDER:
