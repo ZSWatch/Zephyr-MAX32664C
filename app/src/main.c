@@ -1,3 +1,13 @@
+/*
+* Copyright (c) 2025, Daniel Kampert
+*
+* This example demonstrates the use of the MAX32664C sensor hub with Zephyr.
+* It includes Bluetooth Low Energy (BLE) services for heart rate and battery
+* monitoring.
+*
+* SPDX-License-Identifier: Apache-2.0
+*/
+
 #include <zephyr/kernel.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/logging/log.h>
@@ -11,9 +21,12 @@
 #include <zephyr/bluetooth/services/bas.h>
 #include <zephyr/bluetooth/services/hrs.h>
 
-//#include "Loader/max32664c_bl.h"
-//#include "firmware/max32664c_kx122_z_32_9_23.h"
-//#include "firmware/MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31.h"
+#ifdef CONFIG_APPLICATION_RUN_FW_UPDATE
+#include "../drivers/sensor/max32664c/max32664c_bl.h"
+
+#include "firmware/max32664c_kx122_z_32_9_23.h"
+#include "firmware/MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31.h"
+#endif
 
 #include "../drivers/sensor/max32664c/max32664c.h"
 
@@ -122,7 +135,7 @@ static void hrs_notify(void)
         LOG_INF("Confidence: %u", hr.val2);
 
         if (hrf_ntf_enabled) {
-            bt_hrs_notify(hr.val1);
+            bt_hrs_notify(66);
         }
     }
 }
@@ -147,8 +160,10 @@ int main(void)
 
     gpio_pin_set_dt(&led_en, 1);
 
-    //max32664c_bl_enter(sensor_hub, MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31, sizeof(MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31));
-    //max32664c_bl_leave(sensor_hub);
+#ifdef CONFIG_APPLICATION_RUN_FW_UPDATE
+    max32664c_bl_enter(sensor_hub, MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31, sizeof(MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31));
+    max32664c_bl_leave(sensor_hub);
+#endif
 
     if (bt_enable(NULL)) {
         LOG_ERR("Bluetooth init failed!");
@@ -171,7 +186,7 @@ int main(void)
     value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
     sensor_attr_set(sensor_hub, SENSOR_CHAN_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
 
-    while(1)
+    while (1)
     {
         hrs_notify();
 

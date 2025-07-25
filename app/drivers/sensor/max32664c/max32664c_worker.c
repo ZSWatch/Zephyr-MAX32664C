@@ -9,12 +9,15 @@
 
 #include "max32664c.h"
 
+// TODO: Option for dynamic memory?
+#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
 static uint8_t max32664_buffer[(32 * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t))) + 1];
+#endif
 
 LOG_MODULE_REGISTER(maxim_max32664c_worker, CONFIG_MAXIM_MAX32664C_LOG_LEVEL);
 
 /** @brief          Read the status from the sensor hub.
- *                  NOTE: Table 7. Sensor Hub Status Byte
+ *                  NOTE: Table 7 Sensor Hub Status Byte
  *  @param dev      Pointer to device
  *  @param status   Pointer to status byte
  */
@@ -53,58 +56,6 @@ static int max32664c_get_fifo_count(const struct device *dev, uint8_t *fifo)
     LOG_DBG("FIFO count: %u", *fifo);
 
     return rx[0];
-}
-
-/** @brief              
- *  @param dev          Pointer to device
- *  @param algo_config  Pointer to algorithm configuration
- */
-static int max32664c_set_algo_config(const struct device *dev, struct max32664c_algo_config_t *algo_config)
-{
-    uint8_t tx[5];
-    uint8_t rx;
-
-    /* Set the height */
-    /* NOTE: Test it if correct */
-    tx[0] = 0x50;
-    tx[1] = 0x07;
-    tx[2] = 0x06;
-    tx[3] = (((uint16_t)0xAF) << 8) & 0xFF;
-    tx[4] = ((uint16_t)0xAF) & 0xFF;
-    if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        return -EINVAL;
-    }
-
-    /* Set the weight */
-    /* NOTE: Test it if correct */
-    tx[0] = 0x50;
-    tx[1] = 0x07;
-    tx[2] = 0x06;
-    tx[3] = (((uint16_t)0x4E) << 8)  & 0xFF;
-    tx[4] = ((uint16_t)0x4E) & 0xFF;
-    if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        return -EINVAL;
-    }
-
-    /* Set the age */
-    tx[0] = 0x50;
-    tx[1] = 0x07;
-    tx[2] = 0x06;
-    tx[3] = algo_config->age;
-    if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        return -EINVAL;
-    }
-
-    /* Set the gender */
-    tx[0] = 0x50;
-    tx[1] = 0x07;
-    tx[2] = 0x06;
-    tx[3] = algo_config->gender;
-    if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        return -EINVAL;
-    }
-
-    return 0;
 }
 
 /** @brief      Worker thread to read the sensor hub.

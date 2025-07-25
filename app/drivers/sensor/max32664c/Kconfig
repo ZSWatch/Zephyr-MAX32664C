@@ -26,7 +26,7 @@ if SENSOR_MAX32664C
         default n
 
     config MAX32664C_USE_STATIC_MEMORY
-        bool "Enable this option if you don't want to use dynamic memory"
+        bool "Disable this option if you don't want to use dynamic memory"
         default y
 
     config MAX32664C_QUEUE_SIZE

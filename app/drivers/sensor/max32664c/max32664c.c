@@ -562,6 +562,19 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
         return -EINVAL;
     }
 
+    /* Set LED current*/
+    for(uint8_t i = 0; i < sizeof(data->led_current); i++)
+    {
+        tx[0] = 0x40;
+        tx[1] = 0x00;
+        tx[2] = 0x23 + i;
+        tx[3] = data->led_current[i];
+        if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+            LOG_ERR("Can not cset LED%d current", i + 1);
+            return -EINVAL;
+        }
+    }
+
     /* Configure WHRM */
     tx[0] = 0x50;
     tx[1] = 0x07;
@@ -804,7 +817,15 @@ static int max32664c_attr_set(const struct device *dev,
         }
         case SENSOR_ATTR_GENDER:
         {
-            data->algo_conf.gender = val->val1;
+            tx[0] = 0x50;
+            tx[1] = 0x07;
+            tx[2] = 0x08;
+            tx[3] = val->val1 & 0x00FF;
+            if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+                LOG_ERR("Can not set age!");
+                return -EINVAL;
+            }
+
             break;
         }
         case SENSOR_ATTR_SLOPE_DUR:
@@ -826,12 +847,12 @@ static int max32664c_attr_set(const struct device *dev,
                     data->led_current[0] = val->val1 & 0xFF;
                     break;
                 }
-                case SENSOR_CHAN_RED:
+                case SENSOR_CHAN_IR:
                 {
                     data->led_current[1] = val->val1 & 0xFF;
                     break;
                 }
-                case SENSOR_CHAN_IR:
+                case SENSOR_CHAN_RED:
                 {
                     data->led_current[2] = val->val1 & 0xFF;
                     break;
