@@ -9,9 +9,15 @@
 
 #include "max32664c.h"
 
-// TODO: Option for dynamic memory?
 #ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
-static uint8_t max32664_buffer[(32 * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t))) + 1];
+/** @brief This buffer is used to read all available messages from the sensor hub plus the status byte.
+ *         The buffer size is defined by the CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE Kconfig.
+ */
+#if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+static uint8_t max32664_buffer[(CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_ext_report_t))) + 1];
+#else
+static uint8_t max32664_buffer[(CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t))) + 1];
+#endif
 #endif
 
 LOG_MODULE_REGISTER(maxim_max32664c_worker, CONFIG_MAXIM_MAX32664C_LOG_LEVEL);
@@ -87,6 +93,21 @@ void max32664c_worker(const struct device *dev)
             uint8_t tx[2];
 
             max32664c_get_fifo_count(dev, &fifo);
+
+#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
+            uint8_t *max32664_buffer
+
+#if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+            max32664_buffer = k_malloc(fifo * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_ext_report_t)) + 1);
+#else
+            max32664_buffer = k_malloc(fifo * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t)) + 1);
+#endif
+
+            if (max32664_buffer == NULL) {
+                LOG_ERR("Can not allocate memory for max32664_buffer!");
+                continue;
+            }
+#endif
 
             if (data->op_mode == MAX32664C_OP_MODE_RAW) {
                 struct max32664c_raw_t raw_data;
@@ -165,6 +186,11 @@ void max32664c_worker(const struct device *dev)
                 }
             }
 #endif
+
+#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
+            k_free(max32664_buffer);
+#endif
+
         }
         else {
             LOG_WRN("No data ready! Status: 0x%X", max32664_buffer[0]);

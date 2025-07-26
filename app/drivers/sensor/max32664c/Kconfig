@@ -22,16 +22,24 @@ if SENSOR_MAX32664C
         default n
 
     config MAX32664C_USE_EXTENDED_REPORTS
-        bool "Enable this option if you want to use extended reports"
+        bool "Enable this option if you want to use extended reports instead of the default reports"
         default n
 
     config MAX32664C_USE_STATIC_MEMORY
-        bool "Disable this option if you don't want to use dynamic memory"
+        bool "Disable this option if the driver should use dynamic memory"
         default y
 
     config MAX32664C_QUEUE_SIZE
         int "Length of the message queue"
         default 32
+
+    config MAX32664C_SAMPLE_BUFFER_SIZE
+        depends on MAX32664C_USE_STATIC_MEMORY
+        int "Length of the sample buffer for the I2C reading thread"
+        default 64
+        help
+            "This is the number of samples that will be read from the sensor hub in one go.
+            The maximum value is 64, but you can set it lower if you want to reduce memory usage."
 
     choice
         prompt "AFE sensor ID used by the sensor hub"

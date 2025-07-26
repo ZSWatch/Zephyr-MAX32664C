@@ -63,7 +63,7 @@ struct bt_le_adv_param adv_param = {
     .interval_max = BT_GAP_ADV_SLOW_INT_MAX,
 };
 
-const struct device *const sensor_hub = DEVICE_DT_GET(DT_ALIAS(sensor));
+const struct device *const sensor_hub = DEVICE_DT_GET_OR_NULL(DT_ALIAS(sensor));
 static const struct gpio_dt_spec led_en = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
@@ -135,7 +135,7 @@ static void hrs_notify(void)
         LOG_INF("Confidence: %u", hr.val2);
 
         if (hrf_ntf_enabled) {
-            bt_hrs_notify(66);
+            bt_hrs_notify(hr.val1);
         }
     }
 }

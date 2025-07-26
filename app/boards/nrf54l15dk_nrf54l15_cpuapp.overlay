@@ -28,7 +28,6 @@
         label = "Green LED 0";
 };
 
-
 &i2c30 {
     compatible = "nordic,nrf-twim";
     status = "okay";
