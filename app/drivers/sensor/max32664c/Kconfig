@@ -1,64 +1,61 @@
-# MAX62664 biometric sensor hub configuration options.
-
-# Copyright (c) 2025, Daniel Kampert
-#
+# Copyright(c) 2025, Daniel Kampert
 # SPDX-License-Identifier: Apache-2.0
 
 config SENSOR_MAX32664C
-    bool "MAX32664C Driver"
-    default y
-    depends on DT_HAS_MAXIM_MAX32664C_ENABLED
-    select I2C
-    help
-        Enable the driver for the MAX32664C sensor hub.
+	bool "MAX32664C Driver"
+	default y
+	depends on DT_HAS_MAXIM_MAX32664C_ENABLED
+	select I2C
+	help
+		Enable the driver for the MAX32664C biometric sensor hub.
 
 if SENSOR_MAX32664C
-    config MAX32664C_USE_FIRMWARE_LOADER
-        bool "Enable this option if you want to use the I2C firmware loader"
-        default n
+	config MAX32664C_USE_FIRMWARE_LOADER
+		bool "Use this option if you want to use the I2C firmware loader"
+		default n
 
-    config MAX32664C_USE_EXTERNAL_ACC
-        bool "Enable this option if you want to use an external accelerometer"
-        default n
+	config MAX32664C_USE_EXTERNAL_ACC
+		bool "Use this option if you want to use an external accelerometer"
+		default n
 
-    config MAX32664C_USE_EXTENDED_REPORTS
-        bool "Enable this option if you want to use extended reports instead of the default reports"
-        default n
+	config MAX32664C_USE_EXTENDED_REPORTS
+		bool "Use this option if you want to use extended reports instead of the default reports"
+		default n
 
-    config MAX32664C_USE_STATIC_MEMORY
-        bool "Disable this option if the driver should use dynamic memory"
-        default y
+	config MAX32664C_USE_STATIC_MEMORY
+		bool "Disable this option if the driver should use dynamic memory"
+		default y
 
-    config MAX32664C_QUEUE_SIZE
-        int "Length of the message queue"
-        default 32
+	config MAX32664C_QUEUE_SIZE
+		int "Length of the message queue"
+		default 32
 
-    config MAX32664C_SAMPLE_BUFFER_SIZE
-        depends on MAX32664C_USE_STATIC_MEMORY
-        int "Length of the sample buffer for the I2C reading thread"
-        default 64
-        help
-            "This is the number of samples that will be read from the sensor hub in one go.
-            The maximum value is 64, but you can set it lower if you want to reduce memory usage."
+	config MAX32664C_SAMPLE_BUFFER_SIZE
+		depends on MAX32664C_USE_STATIC_MEMORY
+		int "Length of the sample buffer for the I2C reading thread"
+		default 64
+		help
+			This is the number of samples that will be read from the sensor hub in one go.
+			The maximum value is 64, but you can set it lower if you want to reduce memory usage.
 
-    choice
-        prompt "AFE sensor ID used by the sensor hub"
-        default MAX32664C_USE_MAX86161
+	choice
+		prompt "AFE sensor ID used by the sensor hub"
+		default MAX32664C_USE_MAX86161
 
-        config MAX32664C_USE_MAX86141
-            bool "MAX86141"
+		config MAX32664C_USE_MAX86141
+			bool "MAX86141"
 
-        config MAX32664C_USE_MAX86161
-            bool "MAX86161"
-    endchoice
+		config MAX32664C_USE_MAX86161
+			bool "MAX86161"
+	endchoice
 
-    config MAX32664C_ACC_ID
-        hex "Accelerometer ID sensor ID used by the sensor hub"
-        default 0x1B
+	config MAX32664C_ACC_ID
+		hex "Accelerometer ID sensor ID used by the sensor hub"
+		default 0x1B
 
-    config MAX32664C_THREAD_STACK_SIZE
-        int "MAX32664C sample thread stack size"
-        default 4096
+	config MAX32664C_THREAD_STACK_SIZE
+		int "MAX32664C sample thread stack size"
+		default 4096
 
 module = MAXIM_MAX32664C
 module-str = MAXIM_MAX32664C

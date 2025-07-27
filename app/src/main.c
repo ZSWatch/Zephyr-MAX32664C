@@ -63,7 +63,7 @@ struct bt_le_adv_param adv_param = {
     .interval_max = BT_GAP_ADV_SLOW_INT_MAX,
 };
 
-const struct device *const sensor_hub = DEVICE_DT_GET_OR_NULL(DT_ALIAS(sensor));
+static const struct device *const sensor_hub = DEVICE_DT_GET_OR_NULL(DT_ALIAS(sensor));
 static const struct gpio_dt_spec led_en = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
@@ -118,8 +118,6 @@ static void hrs_notify(void)
         struct sensor_value y;
         struct sensor_value z;
 
-        LOG_INF("Raw mode");
-
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_X, &x);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Y, &y);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Z, &z);
@@ -142,6 +140,7 @@ static void hrs_notify(void)
 
 int main(void)
 {
+    int32_t err;
     struct sensor_value value;
 
     if (!device_is_ready(sensor_hub)) {
@@ -174,7 +173,7 @@ int main(void)
     bt_hrs_cb_register(&hrs_cb);
 
     LOG_INF("Starting Legacy Advertising (connectable and scannable)");
-    int32_t err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), NULL, 0);
+    err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), NULL, 0);
     if (err) {
         LOG_ERR("Advertising failed to start! %i", err);
         return 0;
