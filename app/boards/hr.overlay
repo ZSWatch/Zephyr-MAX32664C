@@ -8,6 +8,8 @@
     compatible = "nordic,nrf-twim";
     status = "okay";
     clock-frequency = <400000>;
+
+    // Flash buffer size is needed for the I2C bootloader to flash the firmware
     zephyr,flash-buf-max-size = <8250>;
 };
 
@@ -22,5 +24,6 @@
         motion-threshold = <500>;
         hr-config = [00 11];
         spo2-config = [10 20];
+        use-skin-contact-detection;
     };
 };

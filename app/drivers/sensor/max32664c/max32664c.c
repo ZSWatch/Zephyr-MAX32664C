@@ -67,7 +67,7 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx
         return -EBUSY;
     }
 
-    k_sleep(K_MSEC(MAX32664C_DEFAULT_CMD_DELAY));
+    k_msleep(MAX32664C_DEFAULT_CMD_DELAY);
 
     /* The sensor hub can enter sleep mode again now */
     gpio_pin_set_dt(&config->mfio_gpio, true);
@@ -508,12 +508,15 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
         }
 
         /* Enable SCD */
-        tx[0] = 0x50;
-        tx[1] = 0x07;
-        tx[2] = 0x0C;
-        tx[3] = 0x01;
-        if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-            return -EINVAL;
+        if (data->use_scd) {
+            LOG_DBG("Enabling SCD...");
+            tx[0] = 0x50;
+            tx[1] = 0x07;
+            tx[2] = 0x0C;
+            tx[3] = 0x01;
+            if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
+                return -EINVAL;
+            }
         }
 
         data->op_mode = MAX32664C_OP_MODE_ALGO_AEC;
@@ -702,21 +705,25 @@ static int max32664c_channel_get(const struct device *dev,
             val->val2 = data->report.rr_confidence;
             break;
         }
-        case SENSOR_CHAN_SKIN_CONTACT:
-        {
-            val->val1 = data->report.scd;
-            break;
-        }
         case SENSOR_CHAN_BLOOD_OXYGEN_SATURATION:
         {
             val->val1 = data->report.spo2;
             val->val2 = data->report.spo2_confidence;
             break;
         }
+        case SENSOR_CHAN_SKIN_CONTACT:
+        {
+            if (!data->use_scd) {
+                return -EINVAL;
+            }
+
+            val->val1 = data->report.scd;
+            break;
+        }
         default:
         {
             LOG_ERR("Channel %u not supported!", chan);
-            break;
+            return -EINVAL;
         }
     }
 
@@ -755,7 +762,7 @@ static int max32664c_attr_set(const struct device *dev,
             tx[3] = (val->val1 & 0xFF00) >> 8;
             tx[4] = val->val1 & 0x00FF;
             if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-                LOG_ERR("Can not set height");
+                LOG_ERR("Can not set height!");
                 return -EINVAL;
             }
 
@@ -828,6 +835,11 @@ static int max32664c_attr_set(const struct device *dev,
                 case SENSOR_CHAN_RED:
                 {
                     data->led_current[2] = val->val1 & 0xFF;
+                    break;
+                }
+                case SENSOR_CHAN_SKIN_CONTACT:
+                {
+                    data->use_scd = val->val1;
                     break;
                 }
                 default:
@@ -988,24 +1000,20 @@ static int max32664c_init(const struct device *dev)
         return -ENODEV;
     }
 
-    data->motion_time = config->motion_time;
-    data->motion_threshold = config->motion_threshold;
-    memcpy(data->led_current, config->led_current, sizeof(data->led_current));
-
     gpio_pin_configure_dt(&config->reset_gpio, GPIO_OUTPUT);
     gpio_pin_configure_dt(&config->mfio_gpio, GPIO_OUTPUT);
 
     /* Put the hub into application mode */
     LOG_DBG("Set app mode");
     gpio_pin_set_dt(&config->reset_gpio, false);
-    k_sleep(K_MSEC(20));
+    k_msleep(20);
 
     gpio_pin_set_dt(&config->mfio_gpio, true);
-    k_sleep(K_MSEC(20));
+    k_msleep(20);
 
     /* Wait for 50 ms (switch into app mode) + 1500 ms (initialization) (see page 17 of the User Guide) */
     gpio_pin_set_dt(&config->reset_gpio, true);
-    k_sleep(K_MSEC(1600));
+    k_msleep(1600);
 
     /* Read the device mode */
     tx[0] = 0x02;
@@ -1067,7 +1075,7 @@ static int max32664c_pm_action(const struct device *dev,
 
             /* Pulling MFIO high will cause the hub to enter sleep mode */
             gpio_pin_set_dt(&config->mfio_gpio, true);
-            k_sleep(K_MSEC(20));
+            k_msleep(20);
             break;
         }
         case PM_DEVICE_ACTION_TURN_OFF:
@@ -1112,6 +1120,7 @@ static int max32664c_pm_action(const struct device *dev,
         .spo2_calib = DT_INST_PROP(inst, spo2_calib),                               \
         .hr_config = DT_INST_PROP(inst, hr_config),                                 \
         .spo2_config = DT_INST_PROP(inst, spo2_config),                             \
+        .use_scd = DT_INST_PROP(inst, use_skin_contact_detection),                  \
         .motion_time = DT_INST_PROP(inst, motion_time),                             \
         .motion_threshold = DT_INST_PROP(inst, motion_threshold),                   \
         .min_integration_time_idx = DT_INST_ENUM_IDX(inst, min_integration_time),   \

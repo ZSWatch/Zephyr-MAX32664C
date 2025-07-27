@@ -123,6 +123,8 @@ struct max32664c_config {
     uint8_t min_sampling_rate_idx;              /*< */
     uint8_t max_integration_time_idx;           /*< */
     uint8_t max_sampling_rate_idx;              /*< */
+
+    bool use_scd;                               /*< */
 };
 
 /** @brief 
@@ -143,6 +145,8 @@ struct max32664c_data {
     uint8_t min_sampling_rate_idx;              /*< */
     uint8_t max_integration_time_idx;           /*< */
     uint8_t max_sampling_rate_idx;              /*< */
+
+    bool use_scd;                               /*< */
 
     uint8_t afe_id;
     uint8_t accel_id;
