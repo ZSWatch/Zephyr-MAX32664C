@@ -563,7 +563,7 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
     }
 
     /* Set the LED current */
-    for(uint8_t i = 0; i < sizeof(data->led_current); i++)
+    for (uint8_t i = 0; i < sizeof(data->led_current); i++)
     {
         tx[0] = 0x40;
         tx[1] = 0x00;
@@ -696,10 +696,15 @@ static int max32664c_channel_get(const struct device *dev,
             val->val2 = data->report.hr_confidence;
             break;
         }
-        case SENSOR_CHAN_RR:
+        case SENSOR_CHAN_RESPIRATION_RATE:
         {
             val->val1 = data->report.rr;
             val->val2 = data->report.rr_confidence;
+            break;
+        }
+        case SENSOR_CHAN_SKIN_CONTACT:
+        {
+            val->val1 = data->report.scd;
             break;
         }
         case SENSOR_CHAN_BLOOD_OXYGEN_SATURATION:
@@ -728,8 +733,9 @@ static int max32664c_attr_set(const struct device *dev,
     struct max32664c_data *data = dev->data;
 
     if ((chan != SENSOR_CHAN_HEARTRATE) && (chan != SENSOR_CHAN_BLOOD_OXYGEN_SATURATION) &&
-        (chan != SENSOR_CHAN_RR) && (chan != SENSOR_CHAN_ACCEL_X) &&
-        (chan != SENSOR_CHAN_ACCEL_Z) && (chan != SENSOR_CHAN_ACCEL_Y) &&
+        (chan != SENSOR_CHAN_RESPIRATION_RATE) && (chan != SENSOR_CHAN_SKIN_CONTACT) &&
+        (chan != SENSOR_CHAN_ACCEL_X) && (chan != SENSOR_CHAN_ACCEL_Z) && 
+        (chan != SENSOR_CHAN_ACCEL_Y) &&
         (chan != SENSOR_CHAN_RED) && (chan != SENSOR_CHAN_GREEN) &&
         (chan != SENSOR_CHAN_IR) && (chan != SENSOR_CHAN_ALL)) {
         return -EINVAL;
@@ -907,8 +913,8 @@ static int max32664c_attr_get(const struct device *dev,
     struct max32664c_data *data = dev->data;
 
     if ((chan != SENSOR_CHAN_HEARTRATE) && (chan != SENSOR_CHAN_BLOOD_OXYGEN_SATURATION) &&
-        (chan != SENSOR_CHAN_RR) && (chan != SENSOR_CHAN_ACCEL_X) &&
-        (chan != SENSOR_CHAN_ACCEL_Z) && (chan != SENSOR_CHAN_ACCEL_Y) &&
+        (chan != SENSOR_CHAN_RESPIRATION_RATE) && (chan != SENSOR_CHAN_SKIN_CONTACT) &&
+        (chan != SENSOR_CHAN_ACCEL_X) && (chan != SENSOR_CHAN_ACCEL_Z) && (chan != SENSOR_CHAN_ACCEL_Y) &&
         (chan != SENSOR_CHAN_RED) && (chan != SENSOR_CHAN_GREEN) &&
         (chan != SENSOR_CHAN_IR) && (chan != SENSOR_CHAN_ALL)) {
         return -EINVAL;
