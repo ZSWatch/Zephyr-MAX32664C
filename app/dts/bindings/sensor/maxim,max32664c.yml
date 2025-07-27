@@ -57,7 +57,7 @@ properties:
         Algorithm configuration - SpO2 calibration coefficients.
         The default corresponds to Table 12 in the HR and SpO2 User guide.
 
-    min-int-time:
+    min-integration-time:
       type: int
       default: 14
       enum:
@@ -69,20 +69,20 @@ properties:
         Algorithm configuration - Minimum integration time.
         The default corresponds to Table 11 in the HR and SpO2 User guide.
 
-    min-samp-avg:
-      type: string
-      default: 25-1
+    min-sampling-rate:
+      type: int
+      default: 50
       enum:
-        - 25-1
-        - 50-2
-        - 100-4
-        - 200-8
-        - 400-16
+        - 25
+        - 50
+        - 100
+        - 200
+        - 400
       description:
         Algorithm configuration - Minimum sampling rate and averaging.
         The default corresponds to Table 11 in the HR and SpO2 User guide.
 
-    max-int-time:
+    max-integration-time:
       type: int
       default: 117
       enum:
@@ -94,15 +94,15 @@ properties:
         Algorithm configuration - Maximum integration time.
         The default corresponds to Table 11 in the HR and SpO2 User guide.
 
-    max-samp-avg:
-      type: string
-      default: 100-4
+    max-sampling-rate:
+      type: int
+      default: 100
       enum:
-        - 25-1
-        - 50-2
-        - 100-4
-        - 200-8
-        - 400-16
+        - 25
+        - 50
+        - 100
+        - 200
+        - 400
       description:
         Algorithm configuration - Maximum sampling rate and averaging.
         The default corresponds to Table 11 in the HR and SpO2 User guide.
