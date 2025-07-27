@@ -83,6 +83,12 @@ void max32664c_worker(const struct device *dev)
     uint8_t status;
     struct max32664c_data *data = dev->data;
 
+#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
+    uint8_t *max32664_buffer;
+#endif
+
+    LOG_DBG("Starting worker thread for device: %s", dev->name);
+
     while (data->threadRunning)
     {
         if (max32664c_get_hub_status(dev, &status)) {
@@ -95,13 +101,13 @@ void max32664c_worker(const struct device *dev)
             max32664c_get_fifo_count(dev, &fifo);
 
 #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
-            uint8_t *max32664_buffer
-
 #if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
-            max32664_buffer = k_malloc(fifo * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_ext_report_t)) + 1);
+            size_t buffer_size = fifo * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_ext_report_t)) + 1;
 #else
-            max32664_buffer = k_malloc(fifo * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t)) + 1);
+            size_t buffer_size = fifo * (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t)) + 1;
 #endif
+            LOG_DBG("Allocating memory for max32664_buffer with size: %u", buffer_size);
+            max32664_buffer = (uint8_t *)k_malloc(buffer_size);
 
             if (max32664_buffer == NULL) {
                 LOG_ERR("Can not allocate memory for max32664_buffer!");
@@ -190,10 +196,8 @@ void max32664c_worker(const struct device *dev)
 #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
             k_free(max32664_buffer);
 #endif
-
-        }
-        else {
-            LOG_WRN("No data ready! Status: 0x%X", max32664_buffer[0]);
+        } else {
+            LOG_WRN("No data ready! Status: 0x%X", status);
         }
 
         k_msleep(100);

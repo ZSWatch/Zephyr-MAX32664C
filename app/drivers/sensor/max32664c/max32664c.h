@@ -115,14 +115,13 @@ struct max32664c_config {
     uint16_t motion_threshold;
     uint8_t hr_config[2];
     uint8_t spo2_config[2];
-    uint8_t init_samp_avg;
-    uint8_t min_samp_avg;
-    uint8_t max_samp_avg;
-    uint8_t init_int_time;
-    uint8_t min_int_time;
-    uint8_t max_int_time;
 
     uint8_t led_current[3];                     /**< Initial LED current in mA */
+
+    uint8_t min_integration_time_idx;           /*< */
+    uint8_t min_sampling_rate_idx;              /*< */
+    uint8_t max_integration_time_idx;           /*< */
+    uint8_t max_sampling_rate_idx;              /*< */
 };
 
 /** @brief 
@@ -138,6 +137,11 @@ struct max32664c_data {
     uint8_t motion_threshold;                   /**< Motion threshold in milli-g */
 
     uint8_t led_current[3];                     /**< LED current in mA */
+
+    uint8_t min_integration_time_idx;           /*< */
+    uint8_t min_sampling_rate_idx;              /*< */
+    uint8_t max_integration_time_idx;           /*< */
+    uint8_t max_sampling_rate_idx;              /*< */
 
     uint8_t afe_id;
     uint8_t accel_id;
@@ -170,3 +174,9 @@ void max32664c_worker(const struct device *dev);
  *  @return         0 when successful
  */
 int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx_len, uint8_t* rx_buf, uint32_t rx_len, uint16_t delay);
+
+/** @brief      Run a basic initialization on the sensor hub.
+ *  @param dev  Pointer to device
+ *  @return     0 when successful
+ */
+int max32664c_init_hub(const struct device *dev);

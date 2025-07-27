@@ -562,7 +562,7 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
         return -EINVAL;
     }
 
-    /* Set LED current*/
+    /* Set the LED current */
     for(uint8_t i = 0; i < sizeof(data->led_current); i++)
     {
         tx[0] = 0x40;
@@ -570,7 +570,7 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
         tx[2] = 0x23 + i;
         tx[3] = data->led_current[i];
         if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-            LOG_ERR("Can not cset LED%d current", i + 1);
+            LOG_ERR("Can not set LED%d current", i + 1);
             return -EINVAL;
         }
     }
@@ -613,11 +613,11 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
 
 #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
         if (!extended) {
-            k_msgq_alloc_init(&data->report_queue, sizeof(max32664c_report_t), CONFIG_MAX32664C_QUEUE_SIZE);
+            k_msgq_alloc_init(&data->report_queue, sizeof(struct max32664c_report_t), CONFIG_MAX32664C_QUEUE_SIZE);
         }
     #if CONFIG_MAX32664C_USE_EXTENDED_REPORTS
         else {
-            k_msgq_alloc_init(&data->ext_report_queue, sizeof(max32664c_ext_report_t), CONFIG_MAX32664C_QUEUE_SIZE);
+            k_msgq_alloc_init(&data->ext_report_queue, sizeof(struct max32664c_ext_report_t), CONFIG_MAX32664C_QUEUE_SIZE);
         }
     #endif
 #endif
@@ -628,39 +628,6 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
         sizeof(max32664c_thread_stack),
         (k_thread_entry_t)max32664c_worker,
         (void*)dev, NULL, NULL, K_LOWEST_APPLICATION_THREAD_PRIO, 0, K_NO_WAIT);
-
-    return 0;
-}
-
-/** @brief      Run a basic initialization on the sensor hub.
- *  @param dev  Pointer to device
- *  @return     0 when successful
- */
-static int max32664c_init_hub(const struct device *dev)
-{
-    uint8_t rx;
-    uint8_t tx[5];
-    const struct max32664c_config *config = dev->config;
-
-    LOG_DBG("Initialize sensor hub");
-
-    /* Set the report rate to one report per sensor sample */
-    tx[0] = 0x10;
-    tx[1] = 0x02;
-    tx[2] = 0x01;
-    if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        LOG_ERR("Can not set report rate!");
-        return -EINVAL;
-    }
-
-    /* Set interrupt threshold */
-    tx[0] = 0x10;
-    tx[1] = 0x01;
-    tx[2] = 0x01;
-    if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-        LOG_ERR("Can not set interrupt threshold!");
-        return -EINVAL;
-    }
 
     return 0;
 }
@@ -1128,31 +1095,35 @@ static int max32664c_pm_action(const struct device *dev,
 }
 #endif /* CONFIG_PM_DEVICE */
 
-#define MAX32664C_INIT(inst)                                                    \
-    static struct max32664c_data max32664c_data_##inst;                         \
-                                                                                \
-    static const struct max32664c_config max32664c_config_##inst =              \
-    {                                                                           \
-        .i2c = I2C_DT_SPEC_INST_GET(inst),                                      \
-        .reset_gpio = GPIO_DT_SPEC_INST_GET(inst, reset_gpios),                 \
-        .mfio_gpio = GPIO_DT_SPEC_INST_GET(inst, mfio_gpios),                   \
-        .spo2_calib = DT_INST_PROP(inst, spo2_calib),                           \
-        .hr_config = DT_INST_PROP(inst, hr_config),                             \
-        .spo2_config = DT_INST_PROP(inst, spo2_config),                         \
-        .motion_time = DT_INST_PROP(inst, motion_time),                         \
-        .motion_threshold = DT_INST_PROP(inst, motion_threshold),               \
-        .led_current = DT_INST_PROP(inst, led_current),                         \
-    };                                                                          \
-                                                                                \
-    PM_DEVICE_DT_INST_DEFINE(inst, max32664c_pm_action);                        \
-                                                                                \
-    SENSOR_DEVICE_DT_INST_DEFINE(inst,                                          \
-                                 max32664c_init,                                \
-                                 PM_DEVICE_DT_INST_GET(inst),                   \
-                                 &max32664c_data_##inst,                        \
-                                 &max32664c_config_##inst,                      \
-                                 POST_KERNEL,                                   \
-                                 CONFIG_SENSOR_INIT_PRIORITY,                   \
+#define MAX32664C_INIT(inst)                                                        \
+    static struct max32664c_data max32664c_data_##inst;                             \
+                                                                                    \
+    static const struct max32664c_config max32664c_config_##inst =                  \
+    {                                                                               \
+        .i2c = I2C_DT_SPEC_INST_GET(inst),                                          \
+        .reset_gpio = GPIO_DT_SPEC_INST_GET(inst, reset_gpios),                     \
+        .mfio_gpio = GPIO_DT_SPEC_INST_GET(inst, mfio_gpios),                       \
+        .spo2_calib = DT_INST_PROP(inst, spo2_calib),                               \
+        .hr_config = DT_INST_PROP(inst, hr_config),                                 \
+        .spo2_config = DT_INST_PROP(inst, spo2_config),                             \
+        .motion_time = DT_INST_PROP(inst, motion_time),                             \
+        .motion_threshold = DT_INST_PROP(inst, motion_threshold),                   \
+        .min_integration_time_idx = DT_INST_ENUM_IDX(inst, min_integration_time),   \
+        .min_sampling_rate_idx = DT_INST_ENUM_IDX(inst, min_sampling_rate),         \
+        .max_integration_time_idx = DT_INST_ENUM_IDX(inst, max_integration_time),   \
+        .max_sampling_rate_idx = DT_INST_ENUM_IDX(inst, max_sampling_rate),         \
+        .led_current = DT_INST_PROP(inst, led_current),                             \
+    };                                                                              \
+                                                                                    \
+    PM_DEVICE_DT_INST_DEFINE(inst, max32664c_pm_action);                            \
+                                                                                    \
+    SENSOR_DEVICE_DT_INST_DEFINE(inst,                                              \
+                                 max32664c_init,                                    \
+                                 PM_DEVICE_DT_INST_GET(inst),                       \
+                                 &max32664c_data_##inst,                            \
+                                 &max32664c_config_##inst,                          \
+                                 POST_KERNEL,                                       \
+                                 CONFIG_SENSOR_INIT_PRIORITY,                       \
                                  &max32664c_driver_api)
 
 DT_INST_FOREACH_STATUS_OKAY(MAX32664C_INIT)
