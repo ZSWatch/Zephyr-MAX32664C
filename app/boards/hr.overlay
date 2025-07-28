@@ -25,5 +25,6 @@
         hr-config = [00 11];
         spo2-config = [10 20];
         use-skin-contact-detection;
+		use-max86141;
     };
 };

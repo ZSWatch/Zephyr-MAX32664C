@@ -47,6 +47,7 @@
 		reset-gpios = <&gpio2 0 GPIO_ACTIVE_HIGH>;
 		mfio-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
 		use-skin-contact-detection;
+		use-max86141;
 	};
 };
 

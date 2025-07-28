@@ -71,21 +71,47 @@ enum max32664c_algo_gender {
 	MAX32664_ALGO_GENDER_FEMALE,
 };
 
+/** @brief Data structure for external accelerometer data.
+ *
+ * This structure is used to represent the accelerometer data that can be
+ * collected from an external accelerometer and then fed into the MAX32664C
+ * sensor hub. It contains the x, y, and z acceleration values.
+ * This structure is only used when the external accelerometer is enabled.
+ */
+struct max32664c_acc_data_t {
+	int16_t x;
+	int16_t y;
+	int16_t z;
+} __packed;
+
 #ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
-/** @brief          Enter the bootloader mode and run a firmware update.
- *  @param dev      Pointer to device
- *  @param firmware Pointer to firmware data
- *  @param size     Size of the firmware
- *  @return         0 when successful
+/** @brief			Enter the bootloader mode and run a firmware update.
+ *  @param dev		Pointer to device
+ *  @param firmware	Pointer to firmware data
+ *  @param size		Size of the firmware
+ *  @return			0 when successful
  */
 int max32664c_bl_enter(const struct device *dev, const uint8_t *firmware, uint32_t size);
 
-/** @brief      Leave the bootloader and enter the application mode.
- *  @param dev  Pointer to device
- *  @return     0 when successful
+/** @brief		Leave the bootloader and enter the application mode.
+ *  @param dev	Pointer to device
+ *  @return		0 when successful
  */
 int max32664c_bl_leave(const struct device *dev);
 #endif /* CONFIG_MAX32664C_USE_FIRMWARE_LOADER */
+
+#ifdef CONFIG_MAX32664C_USE_EXTERNAL_ACC
+/** @brief		Fill the FIFO buffer with accelerometer data
+ *				NOTE: This function supports up to 16 samples and it must be called
+ *				periodically to provide accelerometer data to the MAX32664C!
+ *  @param dev		Pointer to device
+ *  @param data		Pointer to the accelerometer data structure
+ *  @param length	Number of samples to fill
+ *  @return		0 when successful
+ */
+int max32664c_acc_fill_fifo(const struct device *dev, struct max32664c_acc_data_t *data,
+			    uint8_t length);
+#endif /* CONFIG_MAX32664C_USE_EXTERNAL_ACC*/
 
 #ifdef __cplusplus
 }

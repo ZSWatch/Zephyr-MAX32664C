@@ -11,7 +11,7 @@ config SENSOR_MAX32664C
 
 if SENSOR_MAX32664C
 	config MAX32664C_USE_FIRMWARE_LOADER
-		bool "Use this option if you want to use the I2C firmware loader"
+		bool "Use this option if you want to flash the sensor hub over the I2C firmware loader"
 		default n
 
 	config MAX32664C_USE_EXTERNAL_ACC
@@ -37,21 +37,6 @@ if SENSOR_MAX32664C
 		help
 			This is the number of samples that will be read from the sensor hub in one go.
 			The maximum value is 64, but you can set it lower if you want to reduce memory usage.
-
-	choice
-		prompt "AFE sensor ID used by the sensor hub"
-		default MAX32664C_USE_MAX86161
-
-		config MAX32664C_USE_MAX86141
-			bool "MAX86141"
-
-		config MAX32664C_USE_MAX86161
-			bool "MAX86161"
-	endchoice
-
-	config MAX32664C_ACC_ID
-		hex "Accelerometer ID sensor ID used by the sensor hub"
-		default 0x1B
 
 	config MAX32664C_THREAD_STACK_SIZE
 		int "MAX32664C sample thread stack size"

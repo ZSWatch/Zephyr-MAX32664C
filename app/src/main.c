@@ -26,7 +26,7 @@
 
 #include "firmware/max32664c_kx122_z_32_9_23.h"
 #include "firmware/MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31.h"
-#endif
+#endif /* CONFIG_APPLICATION_RUN_FW_UPDATE */
 
 #include "../drivers/sensor/max32664c/max32664c.h"
 
@@ -162,7 +162,7 @@ int main(void)
 #ifdef CONFIG_APPLICATION_RUN_FW_UPDATE
     max32664c_bl_enter(sensor_hub, MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31, sizeof(MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31));
     max32664c_bl_leave(sensor_hub);
-#endif
+#endif /* CONFIG_APPLICATION_RUN_FW_UPDATE */
 
     if (bt_enable(NULL)) {
         LOG_ERR("Bluetooth init failed!");
