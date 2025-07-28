@@ -11,7 +11,7 @@
 
 #include "max32664c.h"
 
-LOG_MODULE_REGISTER(maxim_max32664c_init, CONFIG_MAXIM_MAX32664C_LOG_LEVEL);
+LOG_MODULE_REGISTER(maxim_max32664c_init, CONFIG_SENSOR_LOG_LEVEL);
 
 /** @brief      Run a basic initialization on the sensor hub.
  *  @param dev  Pointer to device

@@ -29,7 +29,7 @@ struct max32664c_config {
 static uint8_t max32664c_fw_init_vector[11];
 static uint8_t max32664c_fw_auth_vector[16];
 
-LOG_MODULE_REGISTER(max32664_loader, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(max32664_loader, CONFIG_SENSOR_LOG_LEVEL);
 
 /** @brief          Read / write bootloader data from / to the sensor hub.
  *  @param dev      Pointer to device

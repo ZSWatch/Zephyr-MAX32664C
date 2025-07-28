@@ -25,10 +25,10 @@ static uint8_t
 	max32664_buffer[(CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE *
 			 (sizeof(struct max32664c_raw_t) + sizeof(struct max32664c_report_t))) +
 			1];
-#endif
-#endif
+#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
+#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 
-LOG_MODULE_REGISTER(maxim_max32664c_worker, CONFIG_MAXIM_MAX32664C_LOG_LEVEL);
+LOG_MODULE_REGISTER(maxim_max32664c_worker, CONFIG_SENSOR_LOG_LEVEL);
 
 /** @brief          Read the status from the sensor hub.
  *                  NOTE: Table 7 Sensor Hub Status Byte
@@ -89,17 +89,17 @@ static int max32664c_get_fifo_count(const struct device *dev, uint8_t *fifo)
  */
 void max32664c_worker(const struct device *dev)
 {
-	uint8_t fifo;
-	uint8_t status;
+	uint8_t fifo = 0;
+	uint8_t status = 0;
 	struct max32664c_data *data = dev->data;
 
 #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
 	uint8_t *max32664_buffer;
-#endif
+#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 
 	LOG_DBG("Starting worker thread for device: %s", dev->name);
 
-	while (data->threadRunning) {
+	while (data->is_thread_running) {
 		if (max32664c_get_hub_status(dev, &status)) {
 			/* TODO */
 		}
@@ -118,7 +118,7 @@ void max32664c_worker(const struct device *dev)
 			size_t buffer_size = fifo * (sizeof(struct max32664c_raw_t) +
 						     sizeof(struct max32664c_report_t)) +
 					     1;
-#endif
+#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 			LOG_DBG("Allocating memory for max32664_buffer with size: %u", buffer_size);
 			max32664_buffer = (uint8_t *)k_malloc(buffer_size);
 
@@ -126,7 +126,7 @@ void max32664c_worker(const struct device *dev)
 				LOG_ERR("Can not allocate memory for max32664_buffer!");
 				continue;
 			}
-#endif
+#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 
 			if (data->op_mode == MAX32664C_OP_MODE_RAW) {
 				struct max32664c_raw_t raw_data;
@@ -200,7 +200,7 @@ void max32664c_worker(const struct device *dev)
 					report_data.spo2_low_pi = max32664_buffer[41];
 					report_data.spo2_unreliable_r = max32664_buffer[42];
 					report_data.spo2_state = max32664_buffer[43];
-					report_data.scd = max32664_buffer[44];
+					report_data.scd_state = max32664_buffer[44];
 
 					while (k_msgq_put(&data->raw_queue, &raw_data, K_NO_WAIT) !=
 					       0) {
@@ -238,11 +238,11 @@ void max32664c_worker(const struct device *dev)
 						max32664_buffer[0]);
 				}
 			}
-#endif
+#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 
 #ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
 			k_free(max32664_buffer);
-#endif
+#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 		} else {
 			LOG_WRN("No data ready! Status: 0x%X", status);
 		}

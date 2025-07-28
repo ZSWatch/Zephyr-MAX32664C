@@ -1,8 +1,8 @@
 /*
-* Copyright (c) 2025, Daniel Kampert
-*
-* SPDX-License-Identifier: Apache-2.0
-*/
+ * Copyright (c) 2025, Daniel Kampert
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
 
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/i2c.h>
@@ -21,149 +21,197 @@
 #define SENSOR_CHAN_RESPIRATION_RATE        (SENSOR_CHAN_PRIV_START + 3)
 #define SENSOR_CHAN_SKIN_CONTACT            (SENSOR_CHAN_PRIV_START + 4)
 
-#define MAX32664C_BIT_STATUS_COMM_ERR   0
-#define MAX32664C_BIT_STATUS_DATA_RDY   3
-#define MAX32664C_BIT_STATUS_OUT_OVFL   4
-#define MAX32664C_BIT_STATUS_IN_OVFL    5
-#define MAX32664C_BIT_STATUS_BUSY       6
+#define MAX32664C_BIT_STATUS_COMM_ERR 0
+#define MAX32664C_BIT_STATUS_DATA_RDY 3
+#define MAX32664C_BIT_STATUS_OUT_OVFL 4
+#define MAX32664C_BIT_STATUS_IN_OVFL  5
+#define MAX32664C_BIT_STATUS_BUSY     6
 
-#define MAX32664C_DEFAULT_CMD_DELAY     10
+#define MAX32664C_DEFAULT_CMD_DELAY 10
 
 /** @brief Output formats of the sensor hub.
  */
 enum max32664c_output_format {
-    MAX32664C_OUT_PAUSE,
-    MAX32664C_OUT_SENSOR_ONLY,
-    MAX32664C_OUT_ALGORITHM_ONLY,
-    MAX32664C_OUT_ALGO_AND_SENSOR,
+	MAX32664C_OUT_PAUSE,
+	MAX32664C_OUT_SENSOR_ONLY,
+	MAX32664C_OUT_ALGORITHM_ONLY,
+	MAX32664C_OUT_ALGO_AND_SENSOR,
 };
 
-/** @brief 
+/** @brief
  */
 enum max32664c_attribute {
-    MAX32664C_ATTR_DATE_TIME,
-    MAX32664C_ATTR_BP_CAL_SYS,
-    MAX32664C_ATTR_BP_CAL,
-    MAX32664C_ATTR_START_EST,
-    MAX32664C_ATTR_STOP_EST,
-    MAX32664C_ATTR_LOAD_CALIB,
+	MAX32664C_ATTR_DATE_TIME,
+	MAX32664C_ATTR_BP_CAL_SYS,
+	MAX32664C_ATTR_BP_CAL,
+	MAX32664C_ATTR_START_EST,
+	MAX32664C_ATTR_STOP_EST,
+	MAX32664C_ATTR_LOAD_CALIB,
 };
 
-/** @brief 
+/** @brief Skin contact detection states for the MAX32664C sensor.
  */
 enum max32664c_scd_states {
-    MAX32664C_SCD_STATE_UNKNOWN,
-    MAX32664C_SCD_STATE_OFF_SKIN,
-    MAX32664C_SCD_STATE_ON_OBJECT,
-    MAX32664C_SCD_STATE_ON_SKIN,
+	MAX32664C_SCD_STATE_UNKNOWN,
+	MAX32664C_SCD_STATE_OFF_SKIN,
+	MAX32664C_SCD_STATE_ON_OBJECT,
+	MAX32664C_SCD_STATE_ON_SKIN,
 };
-
-/** @brief 
- */
-struct max32664c_acc_data_t {
-    int16_t x;
-    int16_t y;
-    int16_t z;
-} __attribute__((packed));
 
 /** @brief Raw data structure, reported by the sensor hub.
  */
 struct max32664c_raw_t {
-    uint32_t PPG1:24;
-    uint32_t PPG2:24;
-    uint32_t PPG3:24;
-    uint32_t PPG4:24;
-    uint32_t PPG5:24;
-    uint32_t PPG6:24;
-    struct max32664c_acc_data_t acc;
-} __attribute__((packed));
+	uint32_t ppg1: 24;
+	uint32_t ppg2: 24;
+	uint32_t ppg3: 24;
+	uint32_t ppg4: 24;
+	uint32_t ppg5: 24;
+	uint32_t ppg6: 24;
+	struct max32664c_acc_data_t acc;
+} __packed;
 
 /** @brief Algorithm data structure, reported by the sensor hub.
  */
 struct max32664c_report_t {
+	uint8_t op_mode;
+	uint16_t hr;
+	uint8_t hr_confidence;
+	uint16_t rr;
+	uint8_t rr_confidence;
+	uint8_t activity_class;
+	uint16_t r;
+	uint8_t spo2_confidence;
+	uint16_t spo2;
+	uint8_t spo2_complete;
+	uint8_t spo2_low_signal_quality;
+	uint8_t spo2_motion;
+	uint8_t spo2_low_pi;
+	uint8_t spo2_unreliable_r;
+	uint8_t spo2_state;
+	uint8_t scd_state;
+} __packed;
+
+/** @brief Extended algorithm data structure, reported by the sensor hub.
+ */
+struct max32664c_ext_report_t {
     uint8_t op_mode;
     uint16_t hr;
     uint8_t hr_confidence;
     uint16_t rr;
     uint8_t rr_confidence;
     uint8_t activity_class;
-    uint16_t r;
+
+    uint32_t total_walk_steps;
+    uint32_t total_run_steps;
+    uint32_t total_energy_kcal_x10;
+    uint32_t total_amr_kcal_x10;
+
+    uint8_t led_current_adj1_flag;
+    uint16_t led_current_adj1_val;
+
+    uint8_t led_current_adj2_flag;
+    uint16_t led_current_adj2_val;
+
+    uint8_t led_current_adj3_flag;
+    uint16_t led_current_adj3_val;
+
+    uint8_t integration_time_adj_flag;
+    uint8_t requested_integration_time;
+
+    uint8_t sampling_rate_adj_flag;
+    uint8_t requested_sampling_rate;
+    uint8_t requested_sampling_average;
+
+    uint8_t hrm_afe_ctrl_state;
+    uint8_t is_high_motion_for_hrm;
+
+    uint8_t scd_state;
+
+    uint16_t r_value_x1000;
     uint8_t spo2_confidence;
-    uint16_t spo2;
-    uint8_t spo2_complete;
-    uint8_t spo2_low_signal_quality;
-    uint8_t spo2_motion;
-    uint8_t spo2_low_pi;
-    uint8_t spo2_unreliable_r;
+    uint16_t spo2_value_x10;
+    uint8_t spo2_valid_percent;
+    uint8_t spo2_low_signal_flag;
+    uint8_t spo2_motion_flag;
+    uint8_t spo2_low_pi_flag;
+    uint8_t spo2_unreliable_r_flag;
     uint8_t spo2_state;
-    uint8_t scd;
-} __attribute__((packed));
 
-/** @brief Extended algorithm data structure, reported by the sensor hub.
- */
-struct max32664c_ext_report_t {
-} __attribute__((packed));
+    uint8_t ibi_offset;
+    uint8_t unreliable_orientation_flag;
 
+    uint8_t reserved[2];
+} __packed;
 
-/** @brief 
+/** @brief
  */
 struct max32664c_config {
-    struct i2c_dt_spec i2c;
-    struct gpio_dt_spec reset_gpio;
-    struct gpio_dt_spec mfio_gpio;
-    int32_t spo2_calib[3];
-    uint16_t motion_time;
-    uint16_t motion_threshold;
-    uint8_t hr_config[2];
-    uint8_t spo2_config[2];
+	struct i2c_dt_spec i2c;
+	struct gpio_dt_spec reset_gpio;
+	struct gpio_dt_spec mfio_gpio;
 
-    uint8_t led_current[3];                     /**< Initial LED current in mA */
+	int32_t spo2_calib[3];
+	uint16_t motion_time;
+	uint16_t motion_threshold;
+	uint8_t hr_config[2];
+	uint8_t spo2_config[2];
 
-    uint8_t min_integration_time_idx;           /*< */
-    uint8_t min_sampling_rate_idx;              /*< */
-    uint8_t max_integration_time_idx;           /*< */
-    uint8_t max_sampling_rate_idx;              /*< */
+	uint8_t led_current[3]; /**< Initial LED current in mA */
 
-    bool use_scd;                               /*< */
+	uint8_t min_integration_time_idx; /*< */
+	uint8_t min_sampling_rate_idx;    /*< */
+	uint8_t max_integration_time_idx; /*< */
+	uint8_t max_sampling_rate_idx;    /*< */
+
+	bool use_scd; /*< */
+	bool use_max86141; /*< */
+	bool use_max86161; /*< */
 };
 
-/** @brief 
+/** @brief
  */
 struct max32664c_data {
-    struct max32664c_raw_t raw;                 /**<  */
-    struct max32664c_report_t report;           /**<  */
-    struct max32664c_ext_report_t ext_report;   /**<  */
+	struct max32664c_raw_t raw;               /**<  */
+	struct max32664c_report_t report;         /**<  */
+	struct max32664c_ext_report_t ext_report; /**<  */
 
-    enum max32664c_device_mode op_mode;         /**< Current device mode */
+	enum max32664c_device_mode op_mode; /**< Current device mode */
 
-    uint8_t motion_time;                        /**< Motion time in milliseconds */
-    uint8_t motion_threshold;                   /**< Motion threshold in milli-g */
+	uint8_t motion_time;      /**< Motion time in milliseconds */
+	uint8_t motion_threshold; /**< Motion threshold in milli-g */
 
-    uint8_t led_current[3];                     /**< LED current in mA */
+	uint8_t led_current[3]; /**< LED current in mA */
 
-    uint8_t min_integration_time_idx;           /*< */
-    uint8_t min_sampling_rate_idx;              /*< */
-    uint8_t max_integration_time_idx;           /*< */
-    uint8_t max_sampling_rate_idx;              /*< */
+	uint8_t min_integration_time_idx; /*< */
+	uint8_t min_sampling_rate_idx;    /*< */
+	uint8_t max_integration_time_idx; /*< */
+	uint8_t max_sampling_rate_idx;    /*< */
 
-    bool use_scd;                               /*< */
+	bool use_scd; /*< */
 
-    uint8_t afe_id;
-    uint8_t accel_id;
-    uint8_t hub_ver[3];
+	uint8_t afe_id;
+	uint8_t accel_id;
+	uint8_t hub_ver[3];
 
-    /* Internal */
-    struct k_thread thread;
-    k_tid_t threadID;
-    bool threadRunning;
-    bool configChanged;
+	/* Internal */
+	struct k_thread thread;
+	k_tid_t thread_id;
+	bool is_thread_running;
+    K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_MAX32664C_THREAD_STACK_SIZE);
 
-    struct k_msgq raw_queue;
-    struct k_msgq report_queue;
-    struct k_msgq ext_report_queue;
+	struct k_msgq raw_queue;
+	struct k_msgq report_queue;
+	struct k_msgq ext_report_queue;
 };
 
-/** @brief      
+/** @brief          Enable / Disable the accelerometer.
+ *  @param dev      Pointer to device
+ *  @param enable   Enable / Disable
+ *  @return         0 when successful
+ */
+int max32664c_acc_enable(const struct device *dev, bool enable);
+
+/** @brief      Background worker for reading the sensor hub.
  *  @param dev  Pointer to device
  */
 void max32664c_worker(const struct device *dev);
@@ -178,7 +226,8 @@ void max32664c_worker(const struct device *dev);
  *  @param delay    Command delay (milliseconds)
  *  @return         0 when successful
  */
-int max32664c_i2c_transmit(const struct device *dev, uint8_t* tx_buf, uint8_t tx_len, uint8_t* rx_buf, uint32_t rx_len, uint16_t delay);
+int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx_len,
+			   uint8_t *rx_buf, uint32_t rx_len, uint16_t delay);
 
 /** @brief      Run a basic initialization on the sensor hub.
  *  @param dev  Pointer to device

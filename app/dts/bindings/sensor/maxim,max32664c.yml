@@ -1,4 +1,3 @@
-title: "MAX32664C Biometric Sensor Hub"
 description: |
   The MAX32664 is a ultra-low power biometric sensor hub.
 
@@ -110,6 +109,18 @@ properties:
       and averaging (samples).
       The default corresponds to Table 11 in the HR and SpO2 User guide.
 
+  use-max86141:
+    type: boolean
+    description:
+      Use the MAX86141 as the AFE for the MAX32664C. This is the
+      default and recommended configuration. The driver is optimized for
+      this sensor..
+
+  use-max86161:
+    type: boolean
+    description:
+      Use the MAX86161 as the AFE for the MAX32664C.
+
   use-skin-contact-detection:
     type: boolean
     description:
@@ -129,7 +140,7 @@ properties:
 
   hr-config:
     type: uint8-array
-    default: [00, 01]
+    default: [0x00, 0x01]
     description:
       Algorithm configuration - LED and PD configuration for the heartrate measurement.
       The first entry configures channel 1, the second channel 2.
@@ -137,7 +148,7 @@ properties:
 
   spo2-config:
     type: uint8-array
-    default: [10, 20]
+    default: [0x10, 0x20]
     description:
       Algorithm configuration - LED and PD configuration for the SpO2 measurement.
       The first entry configures the IR channel, the second the red channel.
