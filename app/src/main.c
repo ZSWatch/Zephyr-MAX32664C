@@ -11,7 +11,9 @@
 #include <zephyr/kernel.h>
 #include <zephyr/devicetree.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/sensor.h>
+#include <zephyr/drivers/sensor/max32664c.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
@@ -22,13 +24,9 @@
 #include <zephyr/bluetooth/services/hrs.h>
 
 #ifdef CONFIG_APPLICATION_RUN_FW_UPDATE
-#include "../drivers/sensor/max32664c/max32664c_bl.h"
-
 #include "firmware/max32664c_kx122_z_32_9_23.h"
 #include "firmware/MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31.h"
 #endif /* CONFIG_APPLICATION_RUN_FW_UPDATE */
-
-#include "../drivers/sensor/max32664c/max32664c.h"
 
 #define BLE_CONNECTED               1U
 #define BLE_DISCONNECTED            2U
@@ -58,7 +56,7 @@ static struct bt_hrs_cb hrs_cb = {
 };
 
 struct bt_le_adv_param adv_param = {
-    .options = BT_LE_ADV_OPT_CONNECTABLE | BT_LE_ADV_OPT_USE_NAME,
+    .options = BT_LE_ADV_OPT_CONN | BT_LE_ADV_OPT_USE_NAME,
     .interval_min = BT_GAP_ADV_SLOW_INT_MIN,
     .interval_max = BT_GAP_ADV_SLOW_INT_MAX,
 };
@@ -181,7 +179,7 @@ int main(void)
     LOG_INF("Advertising successfully started");
 
     //value.val1 = MAX32664C_OP_MODE_RAW;
-    value.val1 = MAX32664C_OP_MODE_ALGO_AEC;
+    value.val1 = MAX32664C_OP_MODE_ALGO_AGC;
     value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
     sensor_attr_set(sensor_hub, SENSOR_CHAN_HEARTRATE, SENSOR_ATTR_OP_MODE, &value);
 

@@ -1,0 +1,138 @@
+From 967842df8b17f0fa5eb6072b77f5fdb066e70c78 Mon Sep 17 00:00:00 2001
+From: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
+Date: Tue, 22 Jul 2025 06:16:34 +0000
+Subject: [PATCH] drivers: sensors: Add health measurement to sensor API
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Add the following channels:
+
+- Heart rate
+- SpO2 (Blood oxygen saturation)
+- RR (Respiration rate)
+- Skin contact
+- Activity class
+- Step counter
+
+Add the following attributes:
+
+- Gender
+- Age
+- Weight
+- Height
+- OP-Mode
+  - This attribute should allow the user to switch
+    between different measurement modes. The sensor
+    hub for example uses different modes to measure
+    HR, SpO2 or raw Acc data.
+
+Change the documentation:
+
+- SENSOR_ATTR_CONFIGURATION
+  - It´s not used for mode only in various drivers.
+    Change the documentation to a general configuration.
+- Add missing '*' to align the documentation for GAIN and
+  RESOLUTION attribute
+
+Closes #93474
+
+Signed-off-by: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
+---
+ drivers/sensor/sensor_shell.c   | 11 +++++++++++
+ include/zephyr/drivers/sensor.h | 33 +++++++++++++++++++++++++++++----
+ 2 files changed, 40 insertions(+), 4 deletions(-)
+
+diff --git a/drivers/sensor/sensor_shell.c b/drivers/sensor/sensor_shell.c
+index 8009e817026..c642ac98e49 100644
+--- a/drivers/sensor/sensor_shell.c
++++ b/drivers/sensor/sensor_shell.c
+@@ -114,6 +114,12 @@ static const char *const sensor_channel_name[SENSOR_CHAN_COMMON_COUNT] = {
+ 	[SENSOR_CHAN_GAME_ROTATION_VECTOR] = "game_rotation_vector",
+ 	[SENSOR_CHAN_GRAVITY_VECTOR] = "gravity_vector",
+ 	[SENSOR_CHAN_GBIAS_XYZ] = "gbias_xyz",
++	[SENSOR_CHAN_HEARTRATE] = "heartrate",
++	[SENSOR_CHAN_BLOOD_OXYGEN_SATURATION] = "blood_oxygen_saturation",
++	[SENSOR_CHAN_RESPIRATION_RATE] = "respiration_rate",
++	[SENSOR_CHAN_SKIN_CONTACT] = "skin_contact",
++	[SENSOR_CHAN_ACTIVITY] = "activity",
++	[SENSOR_CHAN_STEP_COUNTER] = "step_counter",
+ 	[SENSOR_CHAN_ALL] = "all",
+ };
+ 
+@@ -136,6 +142,11 @@ static const char *const sensor_attribute_name[SENSOR_ATTR_COMMON_COUNT] = {
+ 	[SENSOR_ATTR_BATCH_DURATION] = "batch_dur",
+ 	[SENSOR_ATTR_GAIN] = "gain",
+ 	[SENSOR_ATTR_RESOLUTION] = "resolution",
++	[SENSOR_ATTR_OP_MODE] = "op_mode",
++	[SENSOR_ATTR_GENDER] = "gender",
++	[SENSOR_ATTR_AGE] = "age",
++	[SENSOR_ATTR_WEIGHT] = "weight",
++	[SENSOR_ATTR_HEIGHT] = "height",
+ };
+ 
+ enum sample_stats_state {
+diff --git a/include/zephyr/drivers/sensor.h b/include/zephyr/drivers/sensor.h
+index ba2b79d2858..5b9483701e2 100644
+--- a/include/zephyr/drivers/sensor.h
++++ b/include/zephyr/drivers/sensor.h
+@@ -201,7 +201,19 @@ enum sensor_channel {
+ 	SENSOR_CHAN_GRAVITY_VECTOR,
+ 	/** Gyroscope bias (X/Y/Z components in radians/s) */
+ 	SENSOR_CHAN_GBIAS_XYZ,
+-
++	/** Heart rate value (bpm) */
++	SENSOR_CHAN_HEARTRATE,
++	/** SpO2 value (%) */
++	SENSOR_CHAN_BLOOD_OXYGEN_SATURATION,
++	/** Respiration rate (breaths per minute) */
++	SENSOR_CHAN_RESPIRATION_RATE,
++	/** Skin contact (1 -> Skin contact, 0, no contact) */
++	SENSOR_CHAN_SKIN_CONTACT,
++	/** Activity class (index). */
++	/** The reported index is vendor specific. */
++	SENSOR_CHAN_ACTIVITY,
++	/** Step counter */
++	SENSOR_CHAN_STEP_COUNTER,
+ 	/** All channels. */
+ 	SENSOR_CHAN_ALL,
+ 
+@@ -339,8 +351,13 @@ enum sensor_attribute {
+ 	 * algorithms to calibrate itself on a certain axis, or all of them.
+ 	 */
+ 	SENSOR_ATTR_CALIB_TARGET,
+-	/** Configure the operating modes of a sensor. */
++	/** Get / Set the configuration of a sensor. */
+ 	SENSOR_ATTR_CONFIGURATION,
++	/**
++	 * Get / Set the operation mode of a sensor. This can be used to
++	 * switch between different measurement modes when a sensor supports them.
++	 */
++	SENSOR_ATTR_OP_MODE,
+ 	/** Set a calibration value needed by a sensor. */
+ 	SENSOR_ATTR_CALIBRATION,
+ 	/** Enable/disable sensor features */
+@@ -356,10 +373,18 @@ enum sensor_attribute {
+ 
+ 	/** Hardware batch duration in ticks */
+ 	SENSOR_ATTR_BATCH_DURATION,
+-	/* Configure the gain of a sensor. */
++	/** Configure the gain of a sensor. */
+ 	SENSOR_ATTR_GAIN,
+-	/* Configure the resolution of a sensor. */
++	/** Configure the resolution of a sensor. */
+ 	SENSOR_ATTR_RESOLUTION,
++	/** Gender of the subject being monitored */
++	SENSOR_ATTR_GENDER,
++	/** Age of the subject being monitored */
++	SENSOR_ATTR_AGE,
++	/** Weight of the subject being monitored */
++	SENSOR_ATTR_WEIGHT,
++	/** Height of the subject being monitored */
++	SENSOR_ATTR_HEIGHT,
+ 	/**
+ 	 * Number of all common sensor attributes.
+ 	 */
+-- 
+2.34.1
+
