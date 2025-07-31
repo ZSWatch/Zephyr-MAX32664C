@@ -1,0 +1,3312 @@
+From fab75926e648b3150cc04df796543a100965857d Mon Sep 17 00:00:00 2001
+From: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
+Date: Thu, 24 Jul 2025 13:52:32 +0000
+Subject: [PATCH] drivers: sensor: Add driver for MAX32664C
+
+- Add DTS for MAX32664C
+- Add driver for MAX32664C
+- Add example for MAX32664C Heart rate measurement with Bluetooth
+- Add private attributes and channels for health measurement
+
+Closes: #93473
+
+Signed-off-by: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
+---
+ drivers/sensor/adi/CMakeLists.txt             |    1 +
+ drivers/sensor/adi/Kconfig                    |    1 +
+ drivers/sensor/adi/max32664c/CMakeLists.txt   |   13 +
+ drivers/sensor/adi/max32664c/Kconfig          |   45 +
+ drivers/sensor/adi/max32664c/max32664c.c      | 1082 +++++++++++++++++
+ drivers/sensor/adi/max32664c/max32664c.h      |  280 +++++
+ drivers/sensor/adi/max32664c/max32664c_acc.c  |   58 +
+ drivers/sensor/adi/max32664c/max32664c_bl.c   |  389 ++++++
+ drivers/sensor/adi/max32664c/max32664c_init.c |  246 ++++
+ .../adi/max32664c/max32664c_interrupt.c       |   77 ++
+ .../sensor/adi/max32664c/max32664c_worker.c   |  371 ++++++
+ dts/bindings/sensor/maxim,max32664c.yml       |  159 +++
+ include/zephyr/drivers/sensor/max32664c.h     |  186 +++
+ samples/sensor/max32664c/CMakeLists.txt       |    7 +
+ samples/sensor/max32664c/README.rst           |   46 +
+ .../boards/nrf54l15dk_nrf54l15_cpuapp.overlay |   79 ++
+ samples/sensor/max32664c/prj.conf             |    7 +
+ samples/sensor/max32664c/sample.yaml          |   15 +
+ samples/sensor/max32664c/src/main.c           |   75 ++
+ 19 files changed, 3137 insertions(+)
+ create mode 100644 drivers/sensor/adi/max32664c/CMakeLists.txt
+ create mode 100644 drivers/sensor/adi/max32664c/Kconfig
+ create mode 100644 drivers/sensor/adi/max32664c/max32664c.c
+ create mode 100644 drivers/sensor/adi/max32664c/max32664c.h
+ create mode 100644 drivers/sensor/adi/max32664c/max32664c_acc.c
+ create mode 100644 drivers/sensor/adi/max32664c/max32664c_bl.c
+ create mode 100644 drivers/sensor/adi/max32664c/max32664c_init.c
+ create mode 100644 drivers/sensor/adi/max32664c/max32664c_interrupt.c
+ create mode 100644 drivers/sensor/adi/max32664c/max32664c_worker.c
+ create mode 100644 dts/bindings/sensor/maxim,max32664c.yml
+ create mode 100644 include/zephyr/drivers/sensor/max32664c.h
+ create mode 100644 samples/sensor/max32664c/CMakeLists.txt
+ create mode 100644 samples/sensor/max32664c/README.rst
+ create mode 100644 samples/sensor/max32664c/boards/nrf54l15dk_nrf54l15_cpuapp.overlay
+ create mode 100644 samples/sensor/max32664c/prj.conf
+ create mode 100644 samples/sensor/max32664c/sample.yaml
+ create mode 100644 samples/sensor/max32664c/src/main.c
+
+diff --git a/drivers/sensor/adi/CMakeLists.txt b/drivers/sensor/adi/CMakeLists.txt
+index f0bb5910cf9..e524f38dc5e 100644
+--- a/drivers/sensor/adi/CMakeLists.txt
++++ b/drivers/sensor/adi/CMakeLists.txt
+@@ -10,4 +10,5 @@ add_subdirectory_ifdef(CONFIG_ADXL345 adxl345)
+ add_subdirectory_ifdef(CONFIG_ADXL362 adxl362)
+ add_subdirectory_ifdef(CONFIG_ADXL367 adxl367)
+ add_subdirectory_ifdef(CONFIG_ADXL372 adxl372)
++add_subdirectory_ifdef(CONFIG_SENSOR_MAX32664C max32664c)
+ # zephyr-keep-sorted-stop
+diff --git a/drivers/sensor/adi/Kconfig b/drivers/sensor/adi/Kconfig
+index dea030c6803..d0812de2dce 100644
+--- a/drivers/sensor/adi/Kconfig
++++ b/drivers/sensor/adi/Kconfig
+@@ -10,4 +10,5 @@ source "drivers/sensor/adi/adxl345/Kconfig"
+ source "drivers/sensor/adi/adxl362/Kconfig"
+ source "drivers/sensor/adi/adxl367/Kconfig"
+ source "drivers/sensor/adi/adxl372/Kconfig"
++source "drivers/sensor/adi/max32664c/Kconfig"
+ # zephyr-keep-sorted-stop
+diff --git a/drivers/sensor/adi/max32664c/CMakeLists.txt b/drivers/sensor/adi/max32664c/CMakeLists.txt
+new file mode 100644
+index 00000000000..b36663c699f
+--- /dev/null
++++ b/drivers/sensor/adi/max32664c/CMakeLists.txt
+@@ -0,0 +1,13 @@
++# SPDX-License-Identifier: Apache-2.0
++
++zephyr_library()
++
++zephyr_sources_ifdef(CONFIG_MAX32664C_USE_FIRMWARE_LOADER max32664c_bl.c)
++
++zephyr_sources_ifdef(CONFIG_MAX32664C_USE_INTERRUPT max32664c_interrupt.c)
++
++zephyr_sources_ifdef(CONFIG_SENSOR_MAX32664C max32664c.c
++                                             max32664c_worker.c
++                                             max32664c_init.c
++                                             max32664c_acc.c
++                                             )
+diff --git a/drivers/sensor/adi/max32664c/Kconfig b/drivers/sensor/adi/max32664c/Kconfig
+new file mode 100644
+index 00000000000..5b939fa826b
+--- /dev/null
++++ b/drivers/sensor/adi/max32664c/Kconfig
+@@ -0,0 +1,45 @@
++# Copyright(c) 2025, Daniel Kampert
++# SPDX-License-Identifier: Apache-2.0
++
++config SENSOR_MAX32664C
++	bool "MAX32664C Driver"
++	default y
++	depends on DT_HAS_MAXIM_MAX32664C_ENABLED
++	select I2C
++	help
++	  Enable the driver for the MAX32664C biometric sensor hub.
++
++if SENSOR_MAX32664C
++config MAX32664C_USE_FIRMWARE_LOADER
++	bool "Use this option if you want to flash the sensor hub over the I2C firmware loader"
++
++config MAX32664C_USE_EXTERNAL_ACC
++	bool "Use this option if you want to use an external accelerometer"
++
++config MAX32664C_USE_EXTENDED_REPORTS
++	bool "Use this option if you want to use extended reports instead of the default reports"
++
++config MAX32664C_USE_STATIC_MEMORY
++	bool "Disable this option if the driver should use dynamic memory"
++	default y
++
++config MAX32664C_QUEUE_SIZE
++	int "Length of the message queue"
++	default 32
++
++config MAX32664C_SAMPLE_BUFFER_SIZE
++	depends on MAX32664C_USE_STATIC_MEMORY
++	int "Length of the sample buffer for the I2C reading thread"
++	default 64
++	help
++	  This is the number of samples that will be read from the sensor hub in one go.
++	  The maximum value is 64, but you can set it lower if you want to reduce memory usage.
++
++config MAX32664C_THREAD_STACK_SIZE
++	int "MAX32664C sample thread stack size"
++	default 4096
++
++config MAX32664C_USE_INTERRUPT
++	bool "Use this option if you want to use the MFIO interrupt support"
++	depends on GPIO
++endif
+diff --git a/drivers/sensor/adi/max32664c/max32664c.c b/drivers/sensor/adi/max32664c/max32664c.c
+new file mode 100644
+index 00000000000..148a1a71a3b
+--- /dev/null
++++ b/drivers/sensor/adi/max32664c/max32664c.c
+@@ -0,0 +1,1082 @@
++/*
++ * Copyright (c) 2025, Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include <zephyr/sys/byteorder.h>
++
++#include "max32664c.h"
++
++#define DT_DRV_COMPAT maxim_max32664c
++
++#if (DT_NUM_INST_STATUS_OKAY(DT_DRV_COMPAT) == 0)
++#warning "max32664c driver enabled without any devices"
++#endif
++
++LOG_MODULE_REGISTER(maxim_max32664c, CONFIG_SENSOR_LOG_LEVEL);
++
++int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx_len,
++			   uint8_t *rx_buf, uint32_t rx_len, uint16_t delay_ms)
++{
++	const struct max32664c_config *config = dev->config;
++
++	/* Wake up the sensor hub before the transmission starts (min. 300 us) */
++	gpio_pin_set_dt(&config->mfio_gpio, false);
++	k_usleep(500);
++
++	if (i2c_write_dt(&config->i2c, tx_buf, tx_len)) {
++		LOG_ERR("I2C transmission error!");
++		return -EBUSY;
++	}
++
++	k_msleep(delay_ms);
++
++	if (i2c_read_dt(&config->i2c, rx_buf, rx_len)) {
++		LOG_ERR("I2C read error!");
++		return -EBUSY;
++	}
++
++	k_msleep(MAX32664C_DEFAULT_CMD_DELAY);
++
++	/* The sensor hub can enter sleep mode again now */
++	gpio_pin_set_dt(&config->mfio_gpio, true);
++	k_usleep(300);
++
++	/* Check the status byte for a valid transaction */
++	if (rx_buf[0] != 0) {
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++/** @brief      Check the accelerometer and AFE WHOAMI registers.
++ *              This function is called during device initialization.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++static int max32664c_check_sensors(const struct device *dev)
++{
++	uint8_t afe_id;
++	uint8_t tx[3];
++	uint8_t rx[2];
++	struct max32664c_data *data = dev->data;
++	const struct max32664c_config *config = dev->config;
++
++	LOG_DBG("Checking sensors...");
++
++	/* Read MAX86141 WHOAMI */
++	tx[0] = 0x41;
++	tx[1] = 0x00;
++	tx[2] = 0xFF;
++	if (max32664c_i2c_transmit(dev, tx, 3, rx, 2, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	if (config->use_max86141) {
++		LOG_DBG("\tUsing MAX86141 as AFE");
++		afe_id = 0x25;
++	} else if (config->use_max86161) {
++		LOG_DBG("\tUsing MAX86161 as AFE");
++		afe_id = 0x36;
++	} else {
++		LOG_ERR("\tNo AFE defined!");
++		return -ENODEV;
++	}
++
++	data->afe_id = rx[1];
++	if (data->afe_id != afe_id) {
++		LOG_ERR("\tAFE WHOAMI failed: 0x%X", data->afe_id);
++		return -ENODEV;
++	}
++
++	LOG_DBG("\tAFE WHOAMI OK: 0x%X", data->afe_id);
++
++	/* Read Accelerometer WHOAMI */
++	tx[0] = 0x41;
++	tx[1] = 0x04;
++	tx[2] = 0x0F;
++	if (max32664c_i2c_transmit(dev, tx, 3, rx, 2, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	data->accel_id = rx[1];
++	/* The sensor hub firmware supports only two accelerometers and one is set to */
++	/* EoL. The remaining one is the ST LIS2DS12. */
++	if (data->accel_id != 0x43) {
++		LOG_ERR("\tAccelerometer WHOAMI failed: 0x%X", data->accel_id);
++		return -ENODEV;
++	}
++
++	LOG_DBG("\tAccelerometer WHOAMI OK: 0x%X", data->accel_id);
++
++	return 0;
++}
++
++/** @brief      Stop the current algorithm.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++static int max32664c_stop_algo(const struct device *dev)
++{
++	uint8_t rx;
++	uint8_t tx[3];
++	struct max32664c_data *data = dev->data;
++
++	if (data->op_mode == MAX32664C_OP_MODE_IDLE) {
++		LOG_DBG("No algorithm running, nothing to stop.");
++		return 0;
++	}
++
++	LOG_DBG("Stop the current algorithm...");
++
++	/* Stop the algorithm */
++	tx[0] = 0x52;
++	tx[1] = 0x07;
++	tx[2] = 0x00;
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 120)) {
++		return -EINVAL;
++	}
++
++	switch (data->op_mode) {
++	case MAX32664C_OP_MODE_RAW: {
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++		k_msgq_cleanup(&data->raw_report_queue);
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++		break;
++	}
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++	case MAX32664C_OP_MODE_ALGO_AEC_EXT:
++	case MAX32664C_OP_MODE_ALGO_AGC_EXT: {
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++		k_msgq_cleanup(&data->ext_report_queue);
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++		break;
++	}
++#else
++	case MAX32664C_OP_MODE_ALGO_AEC:
++	case MAX32664C_OP_MODE_ALGO_AGC: {
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++		k_msgq_cleanup(&data->report_queue);
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++		break;
++	}
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++	case MAX32664C_OP_MODE_SCD: {
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++		k_msgq_cleanup(&data->scd_report_queue);
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++		break;
++	}
++	default: {
++		LOG_ERR("Unknown algorithm mode: %d", data->op_mode);
++		return -EINVAL;
++	}
++	};
++
++	data->op_mode = MAX32664C_OP_MODE_IDLE;
++
++	return 0;
++}
++
++/** @brief      Put the device into raw measurement mode.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++static int max32664c_set_mode_raw(const struct device *dev)
++{
++	uint8_t rx;
++	uint8_t tx[4];
++	struct max32664c_data *data = dev->data;
++
++	/* Stop the current algorithm mode */
++	if (max32664c_stop_algo(dev)) {
++		LOG_ERR("Failed to stop the algorithm!");
++		return -EINVAL;
++	}
++
++	LOG_INF("Entering RAW mode...");
++
++	/* Set the output format to sensor data only */
++	tx[0] = 0x10;
++	tx[1] = 0x00;
++	tx[2] = MAX32664C_OUT_SENSOR_ONLY;
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	/* Enable the AFE */
++	tx[0] = 0x44;
++	tx[1] = 0x00;
++	tx[2] = 0x01;
++	tx[3] = 0x00;
++	if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, 250)) {
++		return -EINVAL;
++	}
++
++	/* Enable the accelerometer */
++	if (max32664c_acc_enable(dev, true)) {
++		return -EINVAL;
++	}
++
++	/* Set AFE sample rate to 100 Hz */
++	tx[0] = 0x40;
++	tx[1] = 0x00;
++	tx[2] = 0x12;
++	tx[3] = 0x18;
++	if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	/* Set the LED current */
++	for (uint8_t i = 0; i < sizeof(data->led_current); i++) {
++		tx[0] = 0x40;
++		tx[1] = 0x00;
++		tx[2] = 0x23 + i;
++		tx[3] = data->led_current[i];
++		LOG_ERR("Set LED%d current: %u", i + 1, data->led_current[i]);
++		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			LOG_ERR("Can not set LED%d current", i + 1);
++			return -EINVAL;
++		}
++	}
++
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++	if (k_msgq_alloc_init(&data->raw_report_queue, sizeof(struct max32664c_raw_report_t),
++			      CONFIG_MAX32664C_QUEUE_SIZE)) {
++		LOG_ERR("Failed to allocate RAW report queue!");
++		return -ENOMEM;
++	}
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++
++	data->op_mode = MAX32664C_OP_MODE_RAW;
++
++	return 0;
++}
++
++/** @brief              Put the sensor hub into algorithm mode.
++ *  @param dev          Pointer to device
++ *  @param device_mode  Target device mode
++ *  @param algo_mode    Target algorithm mode
++ *  @param extended     Set to #True when the extended mode should be used
++ *  @return             0 when successful
++ */
++static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_device_mode device_mode,
++				   enum max32664c_algo_mode algo_mode, bool extended)
++{
++	uint8_t rx;
++	uint8_t tx[5];
++	struct max32664c_data *data = dev->data;
++
++	/* Stop the current algorithm mode */
++	if (max32664c_stop_algo(dev)) {
++		LOG_ERR("Failed to stop the algorithm!");
++		return -EINVAL;
++	}
++
++	LOG_DBG("Entering algorithm mode...");
++
++#ifndef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++	if (extended) {
++		LOG_ERR("No support for extended reports enabled!");
++		return -EINVAL;
++	}
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++
++	/* Set the output mode to sensor and algorithm data */
++	tx[0] = 0x10;
++	tx[1] = 0x00;
++	tx[2] = MAX32664C_OUT_ALGO_AND_SENSOR;
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	/* Set the algorithm mode */
++	tx[0] = 0x50;
++	tx[1] = 0x07;
++	tx[2] = 0x0A;
++	tx[3] = algo_mode;
++	if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	if (device_mode == MAX32664C_OP_MODE_ALGO_AEC) {
++		LOG_DBG("Entering AEC mode...");
++
++		/* Enable AEC */
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x0B;
++		tx[3] = 0x01;
++		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			return -EINVAL;
++		}
++
++		/* Enable Auto PD */
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x12;
++		tx[3] = 0x01;
++		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			return -EINVAL;
++		}
++
++		/* Enable SCD */
++		LOG_DBG("Enabling SCD...");
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x0C;
++		tx[3] = 0x01;
++		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			return -EINVAL;
++		}
++
++		data->op_mode = MAX32664C_OP_MODE_ALGO_AEC;
++
++		if (extended) {
++			data->op_mode = MAX32664C_OP_MODE_ALGO_AEC_EXT;
++		}
++	} else if (device_mode == MAX32664C_OP_MODE_ALGO_AGC) {
++		LOG_DBG("Entering AGC mode...");
++
++		/* TODO: Test if this works */
++		/* Set the LED current */
++		for (uint8_t i = 0; i < sizeof(data->led_current); i++) {
++			tx[0] = 0x40;
++			tx[1] = 0x00;
++			tx[2] = 0x23 + i;
++			tx[3] = data->led_current[i];
++			LOG_ERR("Set LED%d current: %u", i + 1, data->led_current[i]);
++			if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1,
++						   MAX32664C_DEFAULT_CMD_DELAY)) {
++				LOG_ERR("Can not set LED%d current", i + 1);
++				return -EINVAL;
++			}
++		}
++
++		/* Enable AEC */
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x0B;
++		tx[3] = 0x01;
++		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			return -EINVAL;
++		}
++
++		/* Disable PD auto current calculation */
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x12;
++		tx[3] = 0x00;
++		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			return -EINVAL;
++		}
++
++		/* Disable SCD */
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x0C;
++		tx[3] = 0x00;
++		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			return -EINVAL;
++		}
++
++		/* Set AGC target PD current to 10 uA */
++		/* TODO: Add setting of PD current via API or DT? */
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x11;
++		tx[3] = 0x00;
++		tx[4] = 0x64;
++		if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			return -EINVAL;
++		}
++
++		data->op_mode = MAX32664C_OP_MODE_ALGO_AGC;
++
++		if (extended) {
++			data->op_mode = MAX32664C_OP_MODE_ALGO_AGC_EXT;
++		}
++	} else {
++		LOG_ERR("Invalid mode!");
++		return -EINVAL;
++	}
++
++	/* Enable HR and SpO2 algorithm */
++	tx[2] = 0x01;
++	if (extended) {
++		tx[2] = 0x02;
++	}
++
++	tx[0] = 0x52;
++	tx[1] = 0x07;
++
++	/* Use the maximum time to cover all modes (see Table 6 and 12 in the User Guide) */
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 465)) {
++		return -EINVAL;
++	}
++
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++	if (extended) {
++		if (k_msgq_alloc_init(&data->ext_report_queue,
++				      sizeof(struct max32664c_ext_report_t),
++				      CONFIG_MAX32664C_QUEUE_SIZE)) {
++			LOG_ERR("Failed to allocate EXT report queue!");
++			return -ENOMEM;
++		}
++	}
++#else
++	if (!extended) {
++		if (k_msgq_alloc_init(&data->report_queue, sizeof(struct max32664c_report_t),
++				      CONFIG_MAX32664C_QUEUE_SIZE)) {
++			LOG_ERR("Failed to allocate report queue!");
++			return -ENOMEM;
++		}
++	}
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++
++	return 0;
++}
++
++/** @brief      Enable the skin contact detection only mode.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++static int max32664c_set_mode_scd(const struct device *dev)
++{
++	uint8_t rx;
++	uint8_t tx[4];
++	struct max32664c_data *data = dev->data;
++
++	/* Stop the current algorithm mode */
++	if (max32664c_stop_algo(dev)) {
++		LOG_ERR("Failed to stop the algorithm!");
++		return -EINVAL;
++	}
++
++	LOG_DBG("MAX32664C entering SCD mode...");
++
++	/* Use LED2 for SCD */
++	tx[0] = 0xE5;
++	tx[1] = 0x02;
++	if (max32664c_i2c_transmit(dev, tx, 2, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	/* Set the output mode to algorithm data */
++	tx[0] = 0x10;
++	tx[1] = 0x00;
++	tx[2] = MAX32664C_OUT_ALGORITHM_ONLY;
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	/* Enable SCD only algorithm */
++	tx[0] = 0x52;
++	tx[1] = 0x07;
++	tx[2] = 0x03;
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 500)) {
++		return -EINVAL;
++	}
++
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++	if (k_msgq_alloc_init(&data->scd_report_queue, sizeof(struct max32664c_scd_report_t),
++			      CONFIG_MAX32664C_QUEUE_SIZE)) {
++		LOG_ERR("Failed to allocate SCD report queue!");
++		return -ENOMEM;
++	}
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++
++	data->op_mode = MAX32664C_OP_MODE_SCD;
++
++	return 0;
++}
++
++static int max32664c_set_mode_wake_on_motion(const struct device *dev)
++{
++	uint8_t rx;
++	uint8_t tx[6];
++	struct max32664c_data *data = dev->data;
++
++	LOG_DBG("MAX32664C entering wake on motion mode...");
++
++	/* Stop the current algorithm */
++	tx[0] = 0x52;
++	tx[1] = 0x07;
++	tx[2] = 0x00;
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	/* Set the motion detection threshold (see Table 12 in the SpO2 and Heart Rate Using Guide)
++	 */
++	tx[0] = 0x46;
++	tx[1] = 0x04;
++	tx[2] = 0x00;
++	tx[3] = 0x01;
++	tx[4] = MAX32664C_MOTION_TIME(data->motion_time);
++	tx[5] = MAX32664C_MOTION_THRESHOLD(data->motion_threshold);
++	if (max32664c_i2c_transmit(dev, tx, 6, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	/* Set the output mode to sensor data */
++	tx[0] = 0x10;
++	tx[1] = 0x00;
++	tx[2] = MAX32664C_OUT_SENSOR_ONLY;
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	/* Enable the accelerometer */
++	if (max32664c_acc_enable(dev, true)) {
++		return -EINVAL;
++	}
++
++	data->op_mode = MAX32664C_OP_MODE_WAKE_ON_MOTION;
++
++	return 0;
++}
++
++static int max32664c_exit_mode_wake_on_motion(const struct device *dev)
++{
++	uint8_t rx;
++	uint8_t tx[6];
++	struct max32664c_data *data = dev->data;
++
++	LOG_DBG("MAX32664C exiting wake on motion mode...");
++
++	/* Exit wake on motion mode */
++	tx[0] = 0x46;
++	tx[1] = 0x04;
++	tx[2] = 0x00;
++	tx[3] = 0x00;
++	tx[4] = 0xFF;
++	tx[5] = 0xFF;
++	if (max32664c_i2c_transmit(dev, tx, 6, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	/* Disable the accelerometer */
++	if (max32664c_acc_enable(dev, false)) {
++		return -EINVAL;
++	}
++
++	data->op_mode = MAX32664C_OP_MODE_IDLE;
++
++	return 0;
++}
++
++static int max32664c_disable_sensors(const struct device *dev)
++{
++	uint8_t rx;
++	uint8_t tx[4];
++	struct max32664c_data *data = dev->data;
++
++	if (max32664c_stop_algo(dev)) {
++		LOG_ERR("Failed to stop the algorithm!");
++		return -EINVAL;
++	}
++
++	/* Leave wake on motion first because we disable the accelerometer */
++	if (max32664c_exit_mode_wake_on_motion(dev)) {
++		LOG_ERR("Failed to exit wake on motion mode!");
++		return -EINVAL;
++	}
++
++	LOG_DBG("Disable the sensors...");
++
++	/* Disable the AFE */
++	tx[0] = 0x44;
++	tx[1] = 0x00;
++	tx[2] = 0x00;
++	tx[3] = 0x00;
++	if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, 250)) {
++		return -EINVAL;
++	}
++
++	/* Disable the accelerometer */
++	if (max32664c_acc_enable(dev, false)) {
++		return -EINVAL;
++	}
++
++	data->op_mode = MAX32664C_OP_MODE_IDLE;
++
++	return 0;
++}
++
++static int max32664c_sample_fetch(const struct device *dev, enum sensor_channel chan)
++{
++	struct max32664c_data *data = dev->data;
++
++	switch (data->op_mode) {
++	case MAX32664C_OP_MODE_STOP_ALGO:
++	case MAX32664C_OP_MODE_IDLE:
++		LOG_DBG("Device is idle, no data to fetch!");
++		return -EAGAIN;
++	case MAX32664C_OP_MODE_SCD:
++		k_msgq_get(&data->scd_report_queue, &data->scd, K_NO_WAIT);
++		break;
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++	case MAX32664C_OP_MODE_ALGO_AEC_EXT:
++	case MAX32664C_OP_MODE_ALGO_AGC_EXT:
++		k_msgq_get(&data->ext_report_queue, &data->ext, K_NO_WAIT);
++#else
++	case MAX32664C_OP_MODE_ALGO_AEC:
++	case MAX32664C_OP_MODE_ALGO_AGC:
++		k_msgq_get(&data->report_queue, &data->report, K_NO_WAIT);
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++	/* Raw data are reported with normal and extended algorithms so we need to fetch them too */
++	case MAX32664C_OP_MODE_RAW:
++		k_msgq_get(&data->raw_report_queue, &data->raw, K_NO_WAIT);
++		break;
++	default:
++		return -ENOTSUP;
++	};
++
++	return 0;
++}
++
++static int max32664c_channel_get(const struct device *dev, enum sensor_channel chan,
++				 struct sensor_value *val)
++{
++	struct max32664c_data *data = dev->data;
++
++	switch ((int)chan) {
++	case SENSOR_CHAN_ACCEL_X: {
++		val->val1 = data->raw.acc.x;
++		break;
++	}
++	case SENSOR_CHAN_ACCEL_Y: {
++		val->val1 = data->raw.acc.y;
++		break;
++	}
++	case SENSOR_CHAN_ACCEL_Z: {
++		val->val1 = data->raw.acc.z;
++		break;
++	}
++	case SENSOR_CHAN_GREEN: {
++		val->val1 = data->raw.PPG1;
++		break;
++	}
++	case SENSOR_CHAN_IR: {
++		val->val1 = data->raw.PPG2;
++		break;
++	}
++	case SENSOR_CHAN_RED: {
++		val->val1 = data->raw.PPG3;
++		break;
++	}
++	case SENSOR_CHAN_MAX32664C_HEARTRATE: {
++		val->val1 = data->report.hr;
++		val->val2 = data->report.hr_confidence;
++		break;
++	}
++	case SENSOR_CHAN_MAX32664C_RESPIRATION_RATE: {
++		val->val1 = data->report.rr;
++		val->val2 = data->report.rr_confidence;
++		break;
++	}
++	case SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION: {
++		val->val1 = data->report.spo2;
++		val->val2 = data->report.spo2_confidence;
++		break;
++	}
++	case SENSOR_CHAN_MAX32664C_SKIN_CONTACT: {
++		val->val1 = data->report.scd_state;
++		break;
++	}
++	default: {
++		LOG_ERR("Channel %u not supported!", chan);
++		return -ENOTSUP;
++	}
++	}
++
++	return 0;
++}
++
++static int max32664c_attr_set(const struct device *dev, enum sensor_channel chan,
++			      enum sensor_attribute attr, const struct sensor_value *val)
++{
++	int err;
++	uint8_t tx[5];
++	uint8_t rx;
++	struct max32664c_data *data = dev->data;
++
++	err = 0;
++
++	switch ((int)attr) {
++	case SENSOR_ATTR_SAMPLING_FREQUENCY: {
++		break;
++	}
++	case SENSOR_ATTR_MAX32664C_HEIGHT: {
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x06;
++		tx[3] = (val->val1 & 0xFF00) >> 8;
++		tx[4] = val->val1 & 0x00FF;
++		if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			LOG_ERR("Can not set height!");
++			return -EINVAL;
++		}
++
++		break;
++	}
++	case SENSOR_ATTR_MAX32664C_WEIGHT: {
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x07;
++		tx[3] = (val->val1 & 0xFF00) >> 8;
++		tx[4] = val->val1 & 0x00FF;
++		if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			LOG_ERR("Can not set weight!");
++			return -EINVAL;
++		}
++
++		break;
++	}
++	case SENSOR_ATTR_MAX32664C_AGE: {
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x08;
++		tx[3] = val->val1 & 0x00FF;
++		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			LOG_ERR("Can not set age!");
++			return -EINVAL;
++		}
++
++		break;
++	}
++	case SENSOR_ATTR_MAX32664C_GENDER: {
++		tx[0] = 0x50;
++		tx[1] = 0x07;
++		tx[2] = 0x08;
++		tx[3] = val->val1 & 0x00FF;
++		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			LOG_ERR("Can not set age!");
++			return -EINVAL;
++		}
++
++		break;
++	}
++	case SENSOR_ATTR_SLOPE_DUR: {
++		data->motion_time = val->val1;
++		break;
++	}
++	case SENSOR_ATTR_SLOPE_TH: {
++		data->motion_threshold = val->val1;
++		break;
++	}
++	case SENSOR_ATTR_CONFIGURATION: {
++		switch ((int)chan) {
++		case SENSOR_CHAN_GREEN: {
++			data->led_current[0] = val->val1 & 0xFF;
++			break;
++		}
++		case SENSOR_CHAN_IR: {
++			data->led_current[1] = val->val1 & 0xFF;
++			break;
++		}
++		case SENSOR_CHAN_RED: {
++			data->led_current[2] = val->val1 & 0xFF;
++			break;
++		}
++		default: {
++			LOG_ERR("Channel %u not supported for setting attribute!", (int)chan);
++			return -ENOTSUP;
++		}
++		}
++		break;
++	}
++	case SENSOR_ATTR_MAX32664C_OP_MODE: {
++		switch (val->val1) {
++		case MAX32664C_OP_MODE_ALGO_AEC: {
++#ifndef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++			err = max32664c_set_mode_algo(dev, MAX32664C_OP_MODE_ALGO_AEC, val->val2,
++						      false);
++#else
++			return -EINVAL;
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++			break;
++		}
++		case MAX32664C_OP_MODE_ALGO_AEC_EXT: {
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++			err = max32664c_set_mode_algo(dev, MAX32664C_OP_MODE_ALGO_AEC, val->val2,
++						      true);
++#else
++			return -EINVAL;
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++			break;
++		}
++		case MAX32664C_OP_MODE_ALGO_AGC: {
++#ifndef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++			err = max32664c_set_mode_algo(dev, MAX32664C_OP_MODE_ALGO_AGC, val->val2,
++						      false);
++#else
++			return -EINVAL;
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++			break;
++		}
++		case MAX32664C_OP_MODE_ALGO_AGC_EXT: {
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++			err = max32664c_set_mode_algo(dev, MAX32664C_OP_MODE_ALGO_AGC, val->val2,
++						      true);
++#else
++			return -EINVAL;
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++			break;
++		}
++		case MAX32664C_OP_MODE_RAW: {
++			err = max32664c_set_mode_raw(dev);
++			break;
++		}
++		case MAX32664C_OP_MODE_SCD: {
++			err = max32664c_set_mode_scd(dev);
++			break;
++		}
++		case MAX32664C_OP_MODE_WAKE_ON_MOTION: {
++			err = max32664c_set_mode_wake_on_motion(dev);
++			break;
++		}
++		case MAX32664C_OP_MODE_EXIT_WAKE_ON_MOTION: {
++			err = max32664c_exit_mode_wake_on_motion(dev);
++			break;
++		}
++		case MAX32664C_OP_MODE_STOP_ALGO: {
++			err = max32664c_stop_algo(dev);
++			break;
++		}
++		case MAX32664C_OP_MODE_IDLE: {
++			err = max32664c_disable_sensors(dev);
++			break;
++		}
++		default: {
++			LOG_ERR("Unsupported sensor operation mode");
++			return -ENOTSUP;
++		}
++		}
++
++		break;
++	}
++	default: {
++		LOG_ERR("Unsupported sensor attribute!");
++		return -ENOTSUP;
++	}
++	}
++
++	return err;
++}
++
++static int max32664c_attr_get(const struct device *dev, enum sensor_channel chan,
++			      enum sensor_attribute attr, struct sensor_value *val)
++{
++	struct max32664c_data *data = dev->data;
++
++	switch ((int)attr) {
++	case SENSOR_ATTR_MAX32664C_OP_MODE: {
++		val->val1 = data->op_mode;
++		val->val2 = 0;
++		break;
++	}
++	case SENSOR_ATTR_CONFIGURATION: {
++		switch ((int)chan) {
++		case SENSOR_CHAN_GREEN: {
++			val->val1 = data->led_current[0];
++			break;
++		}
++		case SENSOR_CHAN_RED: {
++			val->val1 = data->led_current[1];
++			break;
++		}
++		case SENSOR_CHAN_IR: {
++			val->val1 = data->led_current[2];
++			break;
++		}
++		default: {
++			LOG_ERR("Channel %u not supported for getting attribute!", (int)chan);
++			return -ENOTSUP;
++		}
++		}
++		break;
++	}
++	default: {
++		LOG_ERR("Unsupported sensor attribute!");
++		return -ENOTSUP;
++	}
++	}
++
++	return 0;
++}
++
++static DEVICE_API(sensor, max32664c_driver_api) = {
++	.attr_set = max32664c_attr_set,
++	.attr_get = max32664c_attr_get,
++	.sample_fetch = max32664c_sample_fetch,
++	.channel_get = max32664c_channel_get,
++
++	/* TODO: Will be added later */
++	/* #ifdef CONFIG_SENSOR_ASYNC_API */
++	/*	.submit = max32664c_submit, */
++	/*	.get_decoder = max32664c_get_decoder, */
++	/* #endif */
++};
++
++static int max32664c_init(const struct device *dev)
++{
++	uint8_t tx[2];
++	uint8_t rx[4];
++	const struct max32664c_config *config = dev->config;
++	struct max32664c_data *data = dev->data;
++
++	if (!i2c_is_ready_dt(&config->i2c)) {
++		LOG_ERR("I2C not ready");
++		return -ENODEV;
++	}
++
++	gpio_pin_configure_dt(&config->reset_gpio, GPIO_OUTPUT);
++	gpio_pin_configure_dt(&config->mfio_gpio, GPIO_OUTPUT);
++
++	/* Put the hub into application mode */
++	LOG_DBG("Set app mode");
++	gpio_pin_set_dt(&config->reset_gpio, false);
++	k_msleep(20);
++
++	gpio_pin_set_dt(&config->mfio_gpio, true);
++	k_msleep(20);
++
++	/* Wait for 50 ms (switch into app mode) + 1500 ms (initialization) */
++	/* (see page 17 of the User Guide) */
++	gpio_pin_set_dt(&config->reset_gpio, true);
++	k_msleep(1600);
++
++	/* Read the device mode */
++	tx[0] = 0x02;
++	tx[1] = 0x00;
++	if (max32664c_i2c_transmit(dev, tx, 2, rx, 2, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	data->op_mode = rx[1];
++	LOG_DBG("Mode: %x ", data->op_mode);
++	if (data->op_mode != 0) {
++		return -EINVAL;
++	}
++
++	/* Read the firmware version */
++	tx[0] = 0xFF;
++	tx[1] = 0x03;
++	if (max32664c_i2c_transmit(dev, tx, 2, rx, 4, MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	memcpy(data->hub_ver, &rx[1], 3);
++
++	LOG_DBG("Version: %d.%d.%d", data->hub_ver[0], data->hub_ver[1], data->hub_ver[2]);
++
++	if (max32664c_check_sensors(dev)) {
++		return -EINVAL;
++	}
++
++	if (max32664c_init_hub(dev)) {
++		return -EINVAL;
++	}
++
++#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
++	k_msgq_init(&data->raw_report_queue, data->raw_report_queue_buffer,
++		    sizeof(struct max32664c_raw_report_t),
++		    sizeof(data->raw_report_queue_buffer) / sizeof(struct max32664c_raw_report_t));
++
++	k_msgq_init(&data->scd_report_queue, data->scd_report_queue_buffer,
++		    sizeof(struct max32664c_scd_report_t),
++		    sizeof(data->scd_report_queue_buffer) / sizeof(struct max32664c_scd_report_t));
++
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++	k_msgq_init(&data->ext_report_queue, data->ext_report_queue_buffer,
++		    sizeof(struct max32664c_ext_report_t),
++		    sizeof(data->ext_report_queue_buffer) / sizeof(struct max32664c_ext_report_t));
++#else
++	k_msgq_init(&data->report_queue, data->report_queue_buffer,
++		    sizeof(struct max32664c_report_t),
++		    sizeof(data->report_queue_buffer) / sizeof(struct max32664c_report_t));
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++
++	return 0;
++}
++
++#ifdef CONFIG_PM_DEVICE
++static int max32664c_pm_action(const struct device *dev, enum pm_device_action action)
++{
++	switch (action) {
++	case PM_DEVICE_ACTION_RESUME: {
++		break;
++	}
++	case PM_DEVICE_ACTION_SUSPEND: {
++		const struct max32664c_config *config = dev->config;
++
++		/* Pulling MFIO high will cause the hub to enter sleep mode */
++		gpio_pin_set_dt(&config->mfio_gpio, true);
++		k_msleep(20);
++		break;
++	}
++	case PM_DEVICE_ACTION_TURN_OFF: {
++		uint8_t rx;
++		uint8_t tx[3];
++
++		/* Send a shut down command */
++		/* NOTE: Toggling RSTN is needed to wake the device */
++		tx[0] = 0x01;
++		tx[1] = 0x00;
++		tx[2] = 0x01;
++		if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++			return -EINVAL;
++		}
++		break;
++	}
++	case PM_DEVICE_ACTION_TURN_ON: {
++		/* Toggling RSTN is needed to turn the device on */
++		max32664c_init(dev);
++		break;
++	}
++	default: {
++		return -ENOTSUP;
++	}
++	}
++
++	return 0;
++}
++#endif /* CONFIG_PM_DEVICE */
++
++#define MAX32664C_INIT(inst)                                                                       \
++	static struct max32664c_data max32664c_data_##inst;                                        \
++                                                                                                   \
++	static const struct max32664c_config max32664c_config_##inst = {                           \
++		.i2c = I2C_DT_SPEC_INST_GET(inst),                                                 \
++		.reset_gpio = GPIO_DT_SPEC_INST_GET(inst, reset_gpios),                            \
++		.mfio_gpio = GPIO_DT_SPEC_INST_GET(inst, mfio_gpios),                              \
++		.spo2_calib = DT_INST_PROP(inst, spo2_calib),                                      \
++		.hr_config = DT_INST_PROP(inst, hr_config),                                        \
++		.spo2_config = DT_INST_PROP(inst, spo2_config),                                    \
++		.use_max86141 = DT_INST_PROP(inst, use_max86141),                                  \
++		.use_max86161 = DT_INST_PROP(inst, use_max86161),                                  \
++		.motion_time = DT_INST_PROP(inst, motion_time),                                    \
++		.motion_threshold = DT_INST_PROP(inst, motion_threshold),                          \
++		.min_integration_time_idx = DT_INST_ENUM_IDX(inst, min_integration_time),          \
++		.min_sampling_rate_idx = DT_INST_ENUM_IDX(inst, min_sampling_rate),                \
++		.max_integration_time_idx = DT_INST_ENUM_IDX(inst, max_integration_time),          \
++		.max_sampling_rate_idx = DT_INST_ENUM_IDX(inst, max_sampling_rate),                \
++		.report_period = DT_INST_PROP(inst, report_period),                                \
++		.led_current = DT_INST_PROP(inst, led_current),                                    \
++	};                                                                                         \
++                                                                                                   \
++	PM_DEVICE_DT_INST_DEFINE(inst, max32664c_pm_action);                                       \
++                                                                                                   \
++	SENSOR_DEVICE_DT_INST_DEFINE(inst, max32664c_init, PM_DEVICE_DT_INST_GET(inst),            \
++				     &max32664c_data_##inst, &max32664c_config_##inst,             \
++				     POST_KERNEL, CONFIG_SENSOR_INIT_PRIORITY,                     \
++				     &max32664c_driver_api)
++
++DT_INST_FOREACH_STATUS_OKAY(MAX32664C_INIT)
+diff --git a/drivers/sensor/adi/max32664c/max32664c.h b/drivers/sensor/adi/max32664c/max32664c.h
+new file mode 100644
+index 00000000000..14783febc6f
+--- /dev/null
++++ b/drivers/sensor/adi/max32664c/max32664c.h
+@@ -0,0 +1,280 @@
++/*
++ * Copyright (c) 2025, Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include <zephyr/pm/device.h>
++#include <zephyr/drivers/sensor.h>
++#include <zephyr/drivers/i2c.h>
++#include <zephyr/drivers/gpio.h>
++#include <zephyr/logging/log.h>
++
++#include <zephyr/drivers/sensor/max32664c.h>
++
++#define MAX32664C_BIT_STATUS_NO_ERR   1
++#define MAX32664C_BIT_STATUS_DATA_RDY 3
++#define MAX32664C_BIT_STATUS_OUT_OVFL 4
++#define MAX32664C_BIT_STATUS_IN_OVFL  5
++#define MAX32664C_BIT_STATUS_BUSY     6
++
++#define MAX32664C_DEFAULT_CMD_DELAY 10
++
++/** @brief Output formats of the sensor hub.
++ */
++enum max32664c_output_format {
++	MAX32664C_OUT_PAUSE,
++	MAX32664C_OUT_SENSOR_ONLY,
++	MAX32664C_OUT_ALGORITHM_ONLY,
++	MAX32664C_OUT_ALGO_AND_SENSOR,
++};
++
++/** @brief Skin contact detection states.
++ *  @note The SCD states are only available when the SCD only mode is enabled.
++ */
++enum max32664c_scd_states {
++	MAX32664C_SCD_STATE_UNKNOWN,
++	MAX32664C_SCD_STATE_OFF_SKIN,
++	MAX32664C_SCD_STATE_ON_OBJECT,
++	MAX32664C_SCD_STATE_ON_SKIN,
++};
++
++/** @brief Raw data structure, reported by the sensor hub.
++ */
++struct max32664c_raw_report_t {
++	uint32_t PPG1: 24;
++	uint32_t PPG2: 24;
++	uint32_t PPG3: 24;
++	uint32_t PPG4: 24;
++	uint32_t PPG5: 24;
++	uint32_t PPG6: 24;
++	struct max32664c_acc_data_t acc;
++} __packed;
++
++/** @brief SCD only data structure, reported by the sensor hub.
++ */
++struct max32664c_scd_report_t {
++	uint8_t scd_classifier;
++} __packed;
++
++/** @brief Algorithm data structure, reported by the sensor hub.
++ */
++struct max32664c_report_t {
++	uint8_t op_mode;
++	uint16_t hr;
++	uint8_t hr_confidence;
++	uint16_t rr;
++	uint8_t rr_confidence;
++	uint8_t activity_class;
++	uint16_t r;
++	uint8_t spo2_confidence;
++	uint16_t spo2;
++	uint8_t spo2_complete;
++	uint8_t spo2_low_signal_quality;
++	uint8_t spo2_motion;
++	uint8_t spo2_low_pi;
++	uint8_t spo2_unreliable_r;
++	uint8_t spo2_state;
++	uint8_t scd_state;
++} __packed;
++
++/** @brief Extended algorithm data structure, reported by the sensor hub.
++ */
++struct max32664c_ext_report_t {
++	uint8_t op_mode;
++	uint16_t hr;
++	uint8_t hr_confidence;
++	uint16_t rr;
++	uint8_t rr_confidence;
++	uint8_t activity_class;
++
++	uint32_t total_walk_steps;
++	uint32_t total_run_steps;
++	uint32_t total_energy_kcal;
++	uint32_t total_amr_kcal;
++
++	uint8_t led_current_adj1_flag;
++	uint16_t led_current_adj1_val;
++
++	uint8_t led_current_adj2_flag;
++	uint16_t led_current_adj2_val;
++
++	uint8_t led_current_adj3_flag;
++	uint16_t led_current_adj3_val;
++
++	uint8_t integration_time_adj_flag;
++	uint8_t requested_integration_time;
++
++	uint8_t sampling_rate_adj_flag;
++	uint8_t requested_sampling_rate;
++	uint8_t requested_sampling_average;
++
++	uint8_t hrm_afe_ctrl_state;
++	uint8_t is_high_motion_for_hrm;
++
++	uint8_t scd_state;
++
++	uint16_t r_value;
++	uint8_t spo2_confidence;
++	uint16_t spo2_value;
++	uint8_t spo2_valid_percent;
++	uint8_t spo2_low_signal_flag;
++	uint8_t spo2_motion_flag;
++	uint8_t spo2_low_pi_flag;
++	uint8_t spo2_unreliable_r_flag;
++	uint8_t spo2_state;
++
++	uint8_t ibi_offset;
++	uint8_t unreliable_orientation_flag;
++
++	uint8_t reserved[2];
++} __packed;
++
++/** @brief Device configuration structure.
++ */
++struct max32664c_config {
++	struct i2c_dt_spec i2c;
++	struct gpio_dt_spec reset_gpio;
++
++#ifdef CONFIG_MAX32664C_USE_INTERRUPT
++	const struct device *dev;
++	struct gpio_callback gpio_cb;
++	struct k_work interrupt_work;
++#endif /* CONFIG_MAX32664C_USE_INTERRUPT */
++
++	struct gpio_dt_spec mfio_gpio;
++
++	int32_t spo2_calib[3];
++	uint16_t motion_time;
++	uint16_t motion_threshold;
++
++	uint8_t hr_config[2];
++	uint8_t spo2_config[2];
++	uint8_t led_current[3];           /**< Initial LED current in mA */
++	uint8_t min_integration_time_idx; /*< */
++	uint8_t min_sampling_rate_idx;    /*< */
++	uint8_t max_integration_time_idx; /*< */
++	uint8_t max_sampling_rate_idx;    /*< */
++	uint8_t report_period;            /*< Samples report period */
++
++	bool use_max86141; /*< */
++	bool use_max86161; /*< */
++};
++
++/** @brief Device runtime data structure.
++ */
++struct max32664c_data {
++	struct max32664c_raw_report_t raw; /**<  */
++	struct max32664c_scd_report_t scd; /**<  */
++	struct max32664c_report_t report;  /**<  */
++	struct max32664c_ext_report_t ext; /**<  */
++
++	enum max32664c_device_mode op_mode; /**< Current device mode */
++
++	uint8_t motion_time;              /**< Motion time in milliseconds */
++	uint8_t motion_threshold;         /**< Motion threshold in milli-g */
++	uint8_t led_current[3];           /**< LED current in mA */
++	uint8_t min_integration_time_idx; /*< */
++	uint8_t min_sampling_rate_idx;    /*< */
++	uint8_t max_integration_time_idx; /*< */
++	uint8_t max_sampling_rate_idx;    /*< */
++	uint8_t report_period;            /*< Samples report period */
++	uint8_t afe_id;
++	uint8_t accel_id;
++	uint8_t hub_ver[3];
++
++	/* Internal */
++	struct k_thread thread;
++	k_tid_t thread_id;
++	bool is_thread_running;
++
++#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
++	/** @brief This buffer is used to read all available messages from the sensor hub plus the
++	 * status byte. The buffer size is defined by the CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE
++	 * Kconfig and the largest possible message. The buffer must contain enough space to store
++	 * all available messages at every time because it is not possible to read a single message
++	 * from the sensor hub.
++	 */
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++	uint8_t max32664_i2c_buffer[(CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE *
++				     (sizeof(struct max32664c_raw_report_t) +
++				      sizeof(struct max32664c_ext_report_t))) +
++				    1];
++#else
++	uint8_t max32664_i2c_buffer[(CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE *
++				     (sizeof(struct max32664c_raw_report_t) +
++				      sizeof(struct max32664c_report_t))) +
++				    1];
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++#else
++	uint8_t *max32664_i2c_buffer;
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++
++	K_KERNEL_STACK_MEMBER(thread_stack, CONFIG_MAX32664C_THREAD_STACK_SIZE);
++
++	struct k_msgq raw_report_queue;
++	struct k_msgq scd_report_queue;
++
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++	struct k_msgq ext_report_queue;
++#else
++	struct k_msgq report_queue;
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++
++#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
++	uint8_t raw_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE *
++					sizeof(struct max32664c_raw_report_t)];
++	uint8_t scd_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE *
++					sizeof(struct max32664c_scd_report_t)];
++
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++	uint8_t ext_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE *
++					(sizeof(struct max32664c_raw_report_t) +
++					 sizeof(struct max32664c_ext_report_t))];
++#else
++	uint8_t report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE *
++				    (sizeof(struct max32664c_raw_report_t) +
++				     sizeof(struct max32664c_report_t))];
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY*/
++};
++
++/** @brief          Enable / Disable the accelerometer.
++ *                  NOTE: This code is untested and may not work as expected.
++ *  @param dev      Pointer to device
++ *  @param enable   Enable / Disable
++ *  @return         0 when successful
++ */
++int max32664c_acc_enable(const struct device *dev, bool enable);
++
++/** @brief      Background worker for reading the sensor hub.
++ *  @param dev  Pointer to device
++ */
++void max32664c_worker(const struct device *dev);
++
++/** @brief          Read / write data from / to the sensor hub.
++ *  @param dev      Pointer to device
++ *  @param tx_buf   Pointer to transmit buffer
++ *  @param tx_len   Length of transmit buffer
++ *  @param rx_buf   Pointer to receive buffer
++ *                  NOTE: The buffer must be large enough to store the response and the status byte!
++ *  @param rx_len   Length of the receive buffer
++ *  @param delay    Command delay (milliseconds)
++ *  @return         0 when successful
++ */
++int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx_len,
++			   uint8_t *rx_buf, uint32_t rx_len, uint16_t delay);
++
++/** @brief      Run a basic initialization on the sensor hub.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++int max32664c_init_hub(const struct device *dev);
++
++#if CONFIG_MAX32664C_USE_INTERRUPT
++/** @brief      Initialize the interrupt support for the sensor hub.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++int max32664c_init_interrupt(const struct device *dev);
++#endif /* CONFIG_MAX32664C_USE_INTERRUPT */
+diff --git a/drivers/sensor/adi/max32664c/max32664c_acc.c b/drivers/sensor/adi/max32664c/max32664c_acc.c
+new file mode 100644
+index 00000000000..1b8dfc1b07d
+--- /dev/null
++++ b/drivers/sensor/adi/max32664c/max32664c_acc.c
+@@ -0,0 +1,58 @@
++/*
++ * External accelerometer driver for the MAX32664C biometric sensor hub.
++ *
++ * Copyright (c) 2025, Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include "max32664c.h"
++
++LOG_MODULE_REGISTER(maxim_max32664c_acc, CONFIG_SENSOR_LOG_LEVEL);
++
++int max32664c_acc_enable(const struct device *dev, bool enable)
++{
++	uint8_t tx[4];
++	uint8_t rx;
++
++	tx[0] = 0x44;
++	tx[1] = 0x04;
++	tx[2] = enable;
++
++#if CONFIG_MAX32664C_USE_EXTERNAL_ACC
++	tx[3] = 1;
++#else
++	tx[3] = 0;
++#endif /* CONFIG_MAX32664C_USE_EXTERNAL_ACC */
++
++	if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, 20)) {
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++#ifdef CONFIG_MAX32664C_USE_EXTERNAL_ACC
++int max32664c_acc_fill_fifo(const struct device *dev, struct max32664c_acc_data_t *data,
++			    uint8_t length)
++{
++	uint8_t tx[2 + 16 * sizeof(struct max32664c_acc_data_t)];
++	uint8_t rx;
++
++	if (length > 16) {
++		LOG_ERR("Length exceeds maximum of 16 samples!");
++		return -EINVAL;
++	}
++
++	tx[0] = 0x14;
++	tx[1] = 0x00;
++	memcpy(&tx[2], data, length * sizeof(struct max32664c_acc_data_t));
++
++	if (max32664c_i2c_transmit(dev, tx, 2 + (length * sizeof(struct max32664c_acc_data_t)), &rx,
++				   1, 20)) {
++		return -EINVAL;
++	}
++
++	return 0;
++}
++#endif /* CONFIG_MAX32664C_USE_EXTERNAL_ACC */
+diff --git a/drivers/sensor/adi/max32664c/max32664c_bl.c b/drivers/sensor/adi/max32664c/max32664c_bl.c
+new file mode 100644
+index 00000000000..5dddc8d77e0
+--- /dev/null
++++ b/drivers/sensor/adi/max32664c/max32664c_bl.c
+@@ -0,0 +1,389 @@
++/*
++ * I2C firmware loader for the MAX32664C biometric sensor hub.
++ *
++ * Copyright (c) 2025, Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include <zephyr/kernel.h>
++#include <zephyr/drivers/i2c.h>
++#include <zephyr/drivers/gpio.h>
++#include <zephyr/sys/byteorder.h>
++#include <zephyr/logging/log.h>
++
++#include "max32664c.h"
++
++#define MAX32664C_FW_PAGE_SIZE         8192
++#define MAX32664C_FW_UPDATE_CRC_SIZE   16
++#define MAX32664C_FW_UPDATE_WRITE_SIZE (MAX32664C_FW_PAGE_SIZE + MAX32664C_FW_UPDATE_CRC_SIZE)
++#define MAX32664C_DEFAULT_CMD_DELAY_MS 10
++#define MAX32664C_PAGE_WRITE_DELAY_MS  680
++
++struct max32664c_config {
++	struct i2c_dt_spec i2c;
++	struct gpio_dt_spec reset_gpio;
++	struct gpio_dt_spec mfio_gpio;
++};
++
++static uint8_t max32664c_fw_init_vector[11];
++static uint8_t max32664c_fw_auth_vector[16];
++
++LOG_MODULE_REGISTER(max32664_loader, CONFIG_SENSOR_LOG_LEVEL);
++
++/** @brief          Read / write bootloader data from / to the sensor hub.
++ *  @param dev      Pointer to device
++ *  @param tx_buf   Pointer to transmit buffer
++ *  @param tx_len   Length of transmit buffer
++ *  @param rx_buf   Pointer to receive buffer
++ *                  NOTE: The buffer must be large enough to store the response and the status byte!
++ *  @param rx_len   Length of the receive buffer
++ *  @return         0 when successful
++ */
++static int max32664c_bl_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx_len,
++				     uint8_t *rx_buf, uint8_t rx_len)
++{
++	int err;
++	const struct max32664c_config *config = dev->config;
++
++	err = i2c_write_dt(&config->i2c, tx_buf, tx_len);
++	if (err) {
++		LOG_ERR("I2C transmission error %d!", err);
++		return err;
++	}
++	k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
++	err = i2c_read_dt(&config->i2c, rx_buf, rx_len);
++	if (err) {
++		LOG_ERR("I2C transmission error %d!", err);
++		return err;
++	}
++	k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
++
++	/* Check the status byte for a valid transaction */
++	LOG_DBG("Status: %u", rx_buf[0]);
++	if (rx_buf[0] != 0) {
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++/** @brief          Read application data from the sensor hub.
++ *  @param dev      Pointer to device
++ *  @param family   Family byte
++ *  @param index    Index byte
++ *  @param rx_buf   Pointer to receive buffer
++ *                  NOTE: The buffer must be large enough to store the response and the status byte!
++ *  @param rx_len   Length of receive buffer
++ *  @return         0 when successful
++ */
++static int max32664c_app_i2c_read(const struct device *dev, uint8_t family, uint8_t index,
++				  uint8_t *rx_buf, uint8_t rx_len)
++{
++	uint8_t tx_buf[] = {family, index};
++	const struct max32664c_config *config = dev->config;
++
++	/* Wake the sensor hub before starting an I2C read (see page 17 of the user Guide) */
++	gpio_pin_set_dt(&config->mfio_gpio, false);
++	k_usleep(300);
++
++	i2c_write_dt(&config->i2c, tx_buf, sizeof(tx_buf));
++	k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
++	i2c_read_dt(&config->i2c, rx_buf, rx_len);
++	k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
++
++	gpio_pin_set_dt(&config->mfio_gpio, true);
++
++	/* Check the status byte for a valid transaction */
++	if (rx_buf[0] != 0) {
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++/** @brief          Write a page of data into the sensor hub.
++ *  @param dev      Pointer to device
++ *  @param data     Pointer to firmware data
++ *  @param offset   Start address in the firmware data
++ *  @return         0 when successful
++ */
++static int max32664c_bl_write_page(const struct device *dev, const uint8_t *data, uint32_t offset)
++{
++	int err;
++	uint8_t rx_buf;
++	uint8_t *tx_buf;
++	const struct max32664c_config *config = dev->config;
++
++	/* Alloc memory for one page plus two command bytes */
++	tx_buf = (uint8_t *)k_malloc(MAX32664C_FW_UPDATE_WRITE_SIZE + 2);
++	if (tx_buf == NULL) {
++		return -ENOMEM;
++	}
++
++	/* Copy the data for one page into the buffer but leave space for the two command bytes */
++	memcpy(&tx_buf[2], &data[offset], MAX32664C_FW_UPDATE_WRITE_SIZE);
++
++	/* Set the two command bytes */
++	tx_buf[0] = 0x80;
++	tx_buf[1] = 0x04;
++
++	if (i2c_write_dt(&config->i2c, tx_buf, MAX32664C_FW_UPDATE_WRITE_SIZE + 2)) {
++		err = -EINVAL;
++		goto max32664c_bl_write_page_exit;
++	};
++	k_msleep(MAX32664C_PAGE_WRITE_DELAY_MS);
++	err = i2c_read_dt(&config->i2c, &rx_buf, 1);
++	if (err) {
++		LOG_ERR("I2C read error %d!", err);
++		err = -EINVAL;
++		goto max32664c_bl_write_page_exit;
++	};
++	k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
++
++	err = rx_buf;
++
++	LOG_DBG("Write page status: %u", err);
++
++max32664c_bl_write_page_exit:
++	k_free(tx_buf);
++	return err;
++}
++
++/** @brief      Erase the application from the sensor hub.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++static int max32664c_bl_erase_app(const struct device *dev)
++{
++	uint8_t tx_buf[2] = {0x80, 0x03};
++	uint8_t rx_buf;
++	const struct max32664c_config *config = dev->config;
++
++	if (i2c_write_dt(&config->i2c, tx_buf, sizeof(tx_buf))) {
++		return -EINVAL;
++	};
++
++	k_msleep(1500);
++
++	if (i2c_read_dt(&config->i2c, &rx_buf, sizeof(rx_buf))) {
++		return -EINVAL;
++	};
++
++	k_msleep(MAX32664C_DEFAULT_CMD_DELAY_MS);
++
++	/* Check the status byte for a valid transaction */
++	if (rx_buf != 0) {
++		return -EINVAL;
++	}
++
++	return 0;
++}
++
++/** @brief          Load the firmware into the hub.
++ *                  NOTE: See User Guide, Table 9 for the required steps.
++ *  @param dev      Pointer to device
++ *  @param firmware Pointer to firmware data
++ *  @param size     Firmware size
++ *  @return         0 when successful
++ */
++static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmware, uint32_t size)
++{
++	uint8_t rx_buf;
++	uint8_t tx_buf[18] = {0};
++	uint32_t page_offset;
++
++	/* Get the number of pages from the firmware file (see User Guide page 53) */
++	uint8_t num_pages = firmware[0x44];
++
++	LOG_INF("Loading firmware...");
++	LOG_INF("\tSize: %u", size);
++	LOG_INF("\tPages: %u", num_pages);
++
++	/* Set the number of pages */
++	tx_buf[0] = 0x80;
++	tx_buf[1] = 0x02;
++	tx_buf[2] = 0x00;
++	tx_buf[3] = num_pages;
++	if (max32664c_bl_i2c_transmit(dev, tx_buf, 4, &rx_buf, 1)) {
++		return -EINVAL;
++	}
++
++	if (rx_buf != 0) {
++		LOG_ERR("Failed to set number of pages: %d", rx_buf);
++		return -EINVAL;
++	}
++
++	/* Get the initialization and authentication vectors from the firmware */
++	/* (see User Guide page 53) */
++	memcpy(max32664c_fw_init_vector, &firmware[0x28], sizeof(max32664c_fw_init_vector));
++	memcpy(max32664c_fw_auth_vector, &firmware[0x34], sizeof(max32664c_fw_auth_vector));
++
++	/* Write the initialization vector */
++	LOG_INF("\tWriting init vector...");
++	tx_buf[0] = 0x80;
++	tx_buf[1] = 0x00;
++	memcpy(&tx_buf[2], max32664c_fw_init_vector, sizeof(max32664c_fw_init_vector));
++	if (max32664c_bl_i2c_transmit(dev, tx_buf, 13, &rx_buf, 1)) {
++		return -EINVAL;
++	}
++	if (rx_buf != 0) {
++		LOG_ERR("Failed to set init vector: %d", rx_buf);
++		return -EINVAL;
++	}
++
++	/* Write the authentication vector */
++	LOG_INF("\tWriting auth vector...");
++	tx_buf[0] = 0x80;
++	tx_buf[1] = 0x01;
++	memcpy(&tx_buf[2], max32664c_fw_auth_vector, sizeof(max32664c_fw_auth_vector));
++	if (max32664c_bl_i2c_transmit(dev, tx_buf, 18, &rx_buf, 1)) {
++		return -EINVAL;
++	}
++	if (rx_buf != 0) {
++		LOG_ERR("Failed to set auth vector: %d", rx_buf);
++		return -EINVAL;
++	}
++
++	/* Remove the old app from the hub */
++	LOG_INF("\tRemove old app...");
++	if (max32664c_bl_erase_app(dev)) {
++		return -EINVAL;
++	}
++
++	/* Write the new firmware */
++	LOG_INF("\tWriting new firmware...");
++	page_offset = 0x4C;
++	for (uint8_t i = 0; i < num_pages; i++) {
++		uint8_t status;
++
++		LOG_INF("\t\tPage: %d of %d", (i + 1), num_pages);
++		LOG_INF("\t\tOffset: 0x%x", page_offset);
++		status = max32664c_bl_write_page(dev, firmware, page_offset);
++		LOG_INF("\t\tStatus: %u", status);
++		if (status != 0) {
++			return -EINVAL;
++		}
++
++		page_offset += MAX32664C_FW_UPDATE_WRITE_SIZE;
++	}
++
++	LOG_INF("\tSuccessful!");
++
++	return max32664c_bl_leave(dev);
++}
++
++int max32664c_bl_enter(const struct device *dev, const uint8_t *firmware, uint32_t size)
++{
++	uint8_t rx_buf[4] = {0};
++	uint8_t tx_buf[3];
++	const struct max32664c_config *config = dev->config;
++
++	gpio_pin_configure_dt(&config->reset_gpio, GPIO_OUTPUT);
++	gpio_pin_configure_dt(&config->mfio_gpio, GPIO_OUTPUT);
++
++	/* Put the processor into bootloader mode */
++	LOG_INF("Entering bootloader mode");
++	gpio_pin_set_dt(&config->reset_gpio, false);
++	k_msleep(20);
++
++	gpio_pin_set_dt(&config->mfio_gpio, false);
++	k_msleep(20);
++
++	gpio_pin_set_dt(&config->reset_gpio, true);
++	k_msleep(200);
++
++	/* Set bootloader mode */
++	tx_buf[0] = 0x01;
++	tx_buf[1] = 0x00;
++	tx_buf[2] = 0x08;
++	if (max32664c_bl_i2c_transmit(dev, tx_buf, 3, rx_buf, 1)) {
++		return -EINVAL;
++	}
++
++	/* Read the device mode */
++	tx_buf[0] = 0x02;
++	tx_buf[1] = 0x00;
++	if (max32664c_bl_i2c_transmit(dev, tx_buf, 2, rx_buf, 2)) {
++		return -EINVAL;
++	}
++
++	LOG_DBG("Mode: %x ", rx_buf[1]);
++	if (rx_buf[1] != 8) {
++		LOG_ERR("Device not in bootloader mode!");
++		return -EINVAL;
++	}
++
++	/* Read the bootloader information */
++	tx_buf[0] = 0x81;
++	tx_buf[1] = 0x00;
++	if (max32664c_bl_i2c_transmit(dev, tx_buf, 2, rx_buf, 4)) {
++		return -EINVAL;
++	}
++
++	LOG_INF("Version: %d.%d.%d", rx_buf[1], rx_buf[2], rx_buf[3]);
++
++	/* Read the bootloader page size */
++	tx_buf[0] = 0x81;
++	tx_buf[1] = 0x01;
++	if (max32664c_bl_i2c_transmit(dev, tx_buf, 2, rx_buf, 3)) {
++		return -EINVAL;
++	}
++
++	LOG_INF("Page size: %u", (uint16_t)(rx_buf[1] << 8) | rx_buf[2]);
++
++	return max32664c_bl_load_fw(dev, firmware, size);
++}
++
++int max32664c_bl_leave(const struct device *dev)
++{
++	uint8_t hub_ver[3];
++	uint8_t rx_buf[4] = {0};
++	const struct max32664c_config *config = dev->config;
++
++	gpio_pin_configure_dt(&config->reset_gpio, GPIO_OUTPUT);
++	gpio_pin_configure_dt(&config->mfio_gpio, GPIO_OUTPUT);
++
++	LOG_INF("Entering app mode");
++	gpio_pin_set_dt(&config->reset_gpio, true);
++	gpio_pin_set_dt(&config->mfio_gpio, false);
++	k_msleep(2000);
++
++	gpio_pin_set_dt(&config->reset_gpio, false);
++	k_msleep(5);
++
++	gpio_pin_set_dt(&config->mfio_gpio, true);
++	k_msleep(15);
++
++	gpio_pin_set_dt(&config->reset_gpio, true);
++	k_msleep(1700);
++
++	/* Read the device mode */
++	if (max32664c_app_i2c_read(dev, 0x02, 0x00, rx_buf, 2)) {
++		return -EINVAL;
++	}
++
++	LOG_DBG("Mode: %x ", rx_buf[1]);
++	if (rx_buf[1] != 0) {
++		LOG_ERR("Device not in application mode!");
++		return -EINVAL;
++	}
++
++	/* Read the MCU type */
++	if (max32664c_app_i2c_read(dev, 0xFF, 0x00, rx_buf, 2)) {
++		return -EINVAL;
++	}
++
++	LOG_INF("MCU type: %u", rx_buf[1]);
++
++	/* Read the firmware version */
++	if (max32664c_app_i2c_read(dev, 0xFF, 0x03, rx_buf, 4)) {
++		return -EINVAL;
++	}
++
++	memcpy(hub_ver, &rx_buf[1], 3);
++
++	LOG_INF("Version: %d.%d.%d", hub_ver[0], hub_ver[1], hub_ver[2]);
++
++	return 0;
++}
+diff --git a/drivers/sensor/adi/max32664c/max32664c_init.c b/drivers/sensor/adi/max32664c/max32664c_init.c
+new file mode 100644
+index 00000000000..8c5f1b3d4a9
+--- /dev/null
++++ b/drivers/sensor/adi/max32664c/max32664c_init.c
+@@ -0,0 +1,246 @@
++/*
++ * Initialization code for the MAX32664C biometric sensor hub.
++ *
++ * Copyright (c) 2025, Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include "max32664c.h"
++
++LOG_MODULE_REGISTER(maxim_max32664c_init, CONFIG_SENSOR_LOG_LEVEL);
++
++/** @brief      Set the SpO2 calibration coefficients.
++ *              NOTE: See page 10 of the SpO2 and Heart Rate User Guide for additional information.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++static int max32664c_set_spo2_coeffs(const struct device *dev)
++{
++	const struct max32664c_config *config = dev->config;
++
++	uint8_t tx[15];
++	uint8_t rx;
++
++	/* Write the calibration coefficients */
++	tx[0] = 0x50;
++	tx[1] = 0x07;
++	tx[2] = 0x00;
++
++	/* Copy the A value (index 0) into the transmission buffer */
++	memcpy(&tx[3], &config->spo2_calib[0], sizeof(int32_t));
++
++	/* Copy the B value (index 1) into the transmission buffer */
++	memcpy(&tx[7], &config->spo2_calib[1], sizeof(int32_t));
++
++	/* Copy the C value (index 2) into the transmission buffer */
++	memcpy(&tx[11], &config->spo2_calib[2], sizeof(int32_t));
++
++	return max32664c_i2c_transmit(dev, tx, sizeof(tx), &rx, sizeof(rx),
++				      MAX32664C_DEFAULT_CMD_DELAY);
++}
++
++/** @brief      Write the default configuration to the sensor hub.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++static int max32664c_write_config(const struct device *dev)
++{
++	uint8_t rx;
++	uint8_t tx[5];
++	const struct max32664c_config *config = dev->config;
++	struct max32664c_data *data = dev->data;
++
++	/* Write the default settings */
++	tx[0] = 0x50;
++	tx[1] = 0x07;
++	tx[2] = 0x13;
++	tx[3] = config->min_integration_time_idx;
++	if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not write minimum integration time!");
++		return -EINVAL;
++	}
++
++	tx[0] = 0x50;
++	tx[1] = 0x07;
++	tx[2] = 0x14;
++	tx[3] = config->min_sampling_rate_idx;
++	if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not write minimum sampling rate!");
++		return -EINVAL;
++	}
++
++	tx[0] = 0x50;
++	tx[1] = 0x07;
++	tx[2] = 0x15;
++	tx[3] = config->max_integration_time_idx;
++	if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not write maximum integration time!");
++		return -EINVAL;
++	}
++
++	tx[0] = 0x50;
++	tx[1] = 0x07;
++	tx[2] = 0x16;
++	tx[3] = config->max_sampling_rate_idx;
++	if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not write maximum sampling rate!");
++		return -EINVAL;
++	}
++
++	tx[0] = 0x10;
++	tx[1] = 0x02;
++	tx[2] = config->report_period;
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not set report period!");
++		return -EINVAL;
++	}
++
++	/* Configure WHRM */
++	tx[0] = 0x50;
++	tx[1] = 0x07;
++	tx[2] = 0x17;
++	tx[3] = config->hr_config[0];
++	tx[4] = config->hr_config[1];
++	LOG_DBG("Configuring WHRM: 0x%02X%02X", tx[3], tx[4]);
++	if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not configure WHRM!");
++		return -EINVAL;
++	}
++
++	/* Configure SpO2 */
++	tx[0] = 0x50;
++	tx[1] = 0x07;
++	tx[2] = 0x18;
++	tx[3] = config->spo2_config[0];
++	tx[4] = config->spo2_config[1];
++	LOG_DBG("Configuring SpO2: 0x%02X%02X", tx[3], tx[4]);
++	if (max32664c_i2c_transmit(dev, tx, 5, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not configure SpO2!");
++		return -EINVAL;
++	}
++
++	/* Set the interrupt threshold */
++	tx[0] = 0x10;
++	tx[1] = 0x01;
++	tx[2] = 0x01;
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not set interrupt threshold!");
++		return -EINVAL;
++	}
++
++	if (max32664c_set_spo2_coeffs(dev)) {
++		LOG_ERR("Can not set SpO2 calibration coefficients!");
++		return -EINVAL;
++	}
++
++	data->motion_time = config->motion_time;
++	data->motion_threshold = config->motion_threshold;
++	memcpy(data->led_current, config->led_current, sizeof(data->led_current));
++
++	return 0;
++}
++
++/** @brief      Read the configuration from the sensor hub.
++ *  @param dev  Pointer to device
++ *  @return     0 when successful
++ */
++static int max32664c_read_config(const struct device *dev)
++{
++	uint8_t tx[3];
++	uint8_t rx[2];
++	struct max32664c_data *data = dev->data;
++
++	tx[0] = 0x11;
++	tx[1] = 0x02;
++	if (max32664c_i2c_transmit(dev, tx, 2, rx, 2, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not read report period!");
++		return -EINVAL;
++	}
++	data->report_period = rx[1];
++
++	tx[0] = 0x51;
++	tx[1] = 0x07;
++	tx[2] = 0x13;
++	if (max32664c_i2c_transmit(dev, tx, 3, rx, 2, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not read minimum integration time!");
++		return -EINVAL;
++	}
++	data->min_integration_time_idx = rx[1];
++
++	tx[0] = 0x51;
++	tx[1] = 0x07;
++	tx[2] = 0x14;
++	if (max32664c_i2c_transmit(dev, tx, 3, rx, 2, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not read minimum sampling rate!");
++		return -EINVAL;
++	}
++	data->min_sampling_rate_idx = rx[1];
++
++	tx[0] = 0x51;
++	tx[1] = 0x07;
++	tx[2] = 0x15;
++	if (max32664c_i2c_transmit(dev, tx, 3, rx, 2, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not read maximum integration time!");
++		return -EINVAL;
++	}
++	data->max_integration_time_idx = rx[1];
++
++	tx[0] = 0x51;
++	tx[1] = 0x07;
++	tx[2] = 0x16;
++	if (max32664c_i2c_transmit(dev, tx, 3, rx, 2, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not read maximum sampling rate!");
++		return -EINVAL;
++	}
++	data->max_sampling_rate_idx = rx[1];
++
++	return 0;
++}
++
++int max32664c_init_hub(const struct device *dev)
++{
++	struct max32664c_data *data = dev->data;
++
++	LOG_DBG("Initialize sensor hub");
++
++	if (max32664c_write_config(dev)) {
++		LOG_ERR("Can not write default configuration!");
++		return -EINVAL;
++	}
++
++	if (max32664c_read_config(dev)) {
++		LOG_ERR("Can not read configuration!");
++		return -EINVAL;
++	}
++
++	data->is_thread_running = true;
++	data->thread_id = k_thread_create(&data->thread, data->thread_stack,
++					  K_THREAD_STACK_SIZEOF(data->thread_stack),
++					  (k_thread_entry_t)max32664c_worker, (void *)dev, NULL,
++					  NULL, K_LOWEST_APPLICATION_THREAD_PRIO, 0, K_NO_WAIT);
++
++	k_thread_name_set(data->thread_id, "max32664c_worker");
++
++	LOG_DBG("Initial configuration:");
++
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++	LOG_DBG("\tUsing dynamic memory for queues and buffers");
++#else
++	LOG_DBG("\tUsing static memory for queues and buffers");
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++	LOG_DBG("\tUsing extended reports");
++#else
++	LOG_DBG("\tUsing normal reports");
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS*/
++
++	LOG_DBG("\tReport period: %u", data->report_period);
++	LOG_DBG("\tMinimum integration time: %u", data->min_integration_time_idx);
++	LOG_DBG("\tMinimum sampling rate: %u", data->min_sampling_rate_idx);
++	LOG_DBG("\tMaximum integration time: %u", data->max_integration_time_idx);
++	LOG_DBG("\tMaximum sampling rate: %u", data->max_sampling_rate_idx);
++
++	return 0;
++}
+diff --git a/drivers/sensor/adi/max32664c/max32664c_interrupt.c b/drivers/sensor/adi/max32664c/max32664c_interrupt.c
+new file mode 100644
+index 00000000000..957b5f17762
+--- /dev/null
++++ b/drivers/sensor/adi/max32664c/max32664c_interrupt.c
+@@ -0,0 +1,77 @@
++/*
++ * Trigger code for the MAX32664C biometric sensor hub.
++ *
++ * Copyright (c) 2025, Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include "max32664c.h"
++
++LOG_MODULE_REGISTER(maxim_max32664c_interrupt, CONFIG_SENSOR_LOG_LEVEL);
++
++#ifdef CONFIG_MAX32664C_USE_INTERRUPT
++static void max32664c_interrupt_worker(struct k_work *p_work)
++{
++	struct max32664c_data *data = CONTAINER_OF(p_work, struct max32664c_data, interrupt_work);
++
++	/* TODO */
++}
++
++static void max32664c_gpio_callback_handler(const struct device *p_port, struct gpio_callback *p_cb,
++					   gpio_port_pins_t pins)
++{
++	ARG_UNUSED(pins);
++	ARG_UNUSED(p_port);
++
++	struct max32664c_data *data = CONTAINER_OF(p_cb, struct max32664c_data, gpio_cb);
++
++	k_work_submit(&data->interrupt_work);
++}
++
++int max32664c_init_interrupt(const struct device *dev)
++{
++	LOG_DBG("\tUsing MFIO interrupt mode");
++
++	uint8_t tx[2];
++	uint8_t rx;
++
++	LOG_DBG("Configure interrupt pin");
++	if (!gpio_is_ready_dt(&config->int_gpio)) {
++		LOG_ERR("GPIO not ready!");
++		return err;
++	}
++
++	err = gpio_pin_configure_dt(&config->int_gpio, GPIO_INPUT);
++	if (err < 0) {
++		LOG_ERR("Failed to configure GPIO! Error: %u", err);
++		return err;
++	}
++
++	err = gpio_pin_interrupt_configure_dt(&config->int_gpio, GPIO_INT_EDGE_FALLING);
++	if (err < 0) {
++		LOG_ERR("Failed to configure interrupt! Error: %u", err);
++		return err;
++	}
++
++	gpio_init_callback(&data->gpio_cb, max32664c_gpio_callback_handler,
++			   BIT(config->int_gpio.pin));
++
++	err = gpio_add_callback_dt(&config->int_gpio, &data->gpio_cb);
++	if (err < 0) {
++		LOG_ERR("Failed to add GPIO callback! Error: %u", err);
++		return err;
++	}
++
++	data->interrupt_work.handler = max32664c_interrupt_worker;
++
++	tx[0] = 0xB8;
++	tx[1] = 0x01;
++	if (max32664c_i2c_transmit(dev, tx, 2, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
++		LOG_ERR("Can not enable interrupt mode!");
++		return -EINVAL;
++	}
++
++	return 0;
++}
++#endif /* CONFIG_MAX32664C_USE_INTERRUPT */
+diff --git a/drivers/sensor/adi/max32664c/max32664c_worker.c b/drivers/sensor/adi/max32664c/max32664c_worker.c
+new file mode 100644
+index 00000000000..063c1dee6c1
+--- /dev/null
++++ b/drivers/sensor/adi/max32664c/max32664c_worker.c
+@@ -0,0 +1,371 @@
++/*
++ * Background worker for the MAX32664C biometric sensor hub.
++ *
++ * Copyright (c) 2025, Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include <zephyr/sys/byteorder.h>
++
++#include "max32664c.h"
++
++LOG_MODULE_REGISTER(maxim_max32664c_worker, CONFIG_SENSOR_LOG_LEVEL);
++
++/** @brief              Read the status from the sensor hub.
++ *                      NOTE: Table 7 Sensor Hub Status Byte
++ *  @param dev          Pointer to device
++ *  @param status       Pointer to status byte
++ *  @param i2c_error    Pointer to I2C error byte
++ *  @return             0 when successful, otherwise an error code
++ */
++static int max32664c_get_hub_status(const struct device *dev, uint8_t *status, uint8_t *i2c_error)
++{
++	uint8_t tx[2] = {0x00, 0x00};
++	uint8_t rx[2];
++
++	if (max32664c_i2c_transmit(dev, tx, sizeof(tx), rx, sizeof(rx),
++				   MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	*i2c_error = rx[0];
++	*status = rx[1];
++
++	return 0;
++}
++
++/** @brief      Read the FIFO sample count.
++ *  @param dev  Pointer to device
++ *  @param fifo Pointer to FIFO count
++ */
++static int max32664c_get_fifo_count(const struct device *dev, uint8_t *fifo)
++{
++	uint8_t tx[2] = {0x12, 0x00};
++	uint8_t rx[2];
++
++	if (max32664c_i2c_transmit(dev, tx, sizeof(tx), rx, sizeof(rx),
++				   MAX32664C_DEFAULT_CMD_DELAY)) {
++		return -EINVAL;
++	}
++
++	*fifo = rx[1];
++
++	return rx[0];
++}
++
++/** @brief          Parse the buffer to get the raw data from the sensor hub.
++ *  @param dev      Pointer to device
++ *  @param report  Pointer to raw report structure
++ */
++static void max32664c_parse_raw(const struct device *dev, struct max32664c_raw_report_t *report)
++{
++	struct max32664c_data *data = dev->data;
++
++	report->PPG1 = ((uint32_t)(data->max32664_i2c_buffer[1]) << 16) |
++		       ((uint32_t)(data->max32664_i2c_buffer[2]) << 8) |
++		       data->max32664_i2c_buffer[3];
++	report->PPG2 = ((uint32_t)(data->max32664_i2c_buffer[4]) << 16) |
++		       ((uint32_t)(data->max32664_i2c_buffer[5]) << 8) |
++		       data->max32664_i2c_buffer[6];
++	report->PPG3 = ((uint32_t)(data->max32664_i2c_buffer[7]) << 16) |
++		       ((uint32_t)(data->max32664_i2c_buffer[8]) << 8) |
++		       data->max32664_i2c_buffer[9];
++
++	/* PPG4 to 6 are used for PD2 */
++	report->PPG4 = 0;
++	report->PPG5 = 0;
++	report->PPG6 = 0;
++
++	report->acc.x =
++		((int16_t)(data->max32664_i2c_buffer[19]) << 8) | data->max32664_i2c_buffer[20];
++	report->acc.y =
++		((int16_t)(data->max32664_i2c_buffer[21]) << 8) | data->max32664_i2c_buffer[22];
++	report->acc.z =
++		((int16_t)(data->max32664_i2c_buffer[23]) << 8) | data->max32664_i2c_buffer[24];
++}
++
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++/** @brief          Parse the buffer to get the extended report data from the sensor hub.
++ *  @param dev      Pointer to device
++ *  @param report   Pointer to extended report structure
++ */
++static void max32664c_parse_ext_report(const struct device *dev,
++				       struct max32664c_ext_report_t *report)
++{
++	struct max32664c_data *data = dev->data;
++
++	report->op_mode = data->max32664_i2c_buffer[25];
++	report->hr =
++		(((uint16_t)(data->max32664_i2c_buffer[26]) << 8) | data->max32664_i2c_buffer[27]) /
++		10;
++	report->hr_confidence = data->max32664_i2c_buffer[28];
++	report->rr =
++		(((uint16_t)(data->max32664_i2c_buffer[29]) << 8) | data->max32664_i2c_buffer[30]) /
++		10;
++	report->rr_confidence = data->max32664_i2c_buffer[31];
++	report->activity_class = data->max32664_i2c_buffer[32];
++	report->total_walk_steps = data->max32664_i2c_buffer[33] |
++				   ((uint32_t)(data->max32664_i2c_buffer[34]) << 8) |
++				   ((uint32_t)(data->max32664_i2c_buffer[35]) << 16) |
++				   ((uint32_t)(data->max32664_i2c_buffer[36]) << 24);
++	report->total_run_steps = data->max32664_i2c_buffer[37] |
++				  ((uint32_t)(data->max32664_i2c_buffer[38]) << 8) |
++				  ((uint32_t)(data->max32664_i2c_buffer[39]) << 16) |
++				  ((uint32_t)(data->max32664_i2c_buffer[40]) << 24);
++	report->total_energy_kcal = data->max32664_i2c_buffer[41] |
++				    ((uint32_t)(data->max32664_i2c_buffer[42]) << 8) |
++				    ((uint32_t)(data->max32664_i2c_buffer[43]) << 16) |
++				    ((uint32_t)(data->max32664_i2c_buffer[44]) << 24);
++	report->total_amr_kcal = data->max32664_i2c_buffer[45] |
++				 ((uint32_t)(data->max32664_i2c_buffer[46]) << 8) |
++				 ((uint32_t)(data->max32664_i2c_buffer[47]) << 16) |
++				 ((uint32_t)(data->max32664_i2c_buffer[48]) << 24);
++	report->led_current_adj1_flag = data->max32664_i2c_buffer[49];
++	report->led_current_adj1_val =
++		(((uint16_t)(data->max32664_i2c_buffer[50]) << 8) | data->max32664_i2c_buffer[51]) /
++		10;
++	report->led_current_adj2_flag = data->max32664_i2c_buffer[52];
++	report->led_current_adj2_val =
++		(((uint16_t)(data->max32664_i2c_buffer[53]) << 8) | data->max32664_i2c_buffer[54]) /
++		10;
++	report->led_current_adj3_flag = data->max32664_i2c_buffer[55];
++	report->led_current_adj3_val =
++		(((uint16_t)(data->max32664_i2c_buffer[56]) << 8) | data->max32664_i2c_buffer[57]) /
++		10;
++	report->integration_time_adj_flag = data->max32664_i2c_buffer[58];
++	report->requested_integration_time = data->max32664_i2c_buffer[59];
++	report->sampling_rate_adj_flag = data->max32664_i2c_buffer[60];
++	report->requested_sampling_rate = data->max32664_i2c_buffer[61];
++	report->requested_sampling_average = data->max32664_i2c_buffer[62];
++	report->hrm_afe_ctrl_state = data->max32664_i2c_buffer[63];
++	report->is_high_motion_for_hrm = data->max32664_i2c_buffer[64];
++	report->scd_state = data->max32664_i2c_buffer[65];
++	report->r_value =
++		(((uint16_t)(data->max32664_i2c_buffer[66]) << 8) | data->max32664_i2c_buffer[67]) /
++		1000;
++	report->spo2_confidence = data->max32664_i2c_buffer[68];
++	report->spo2_value =
++		(((uint16_t)(data->max32664_i2c_buffer[69]) << 8) | data->max32664_i2c_buffer[70]) /
++		10;
++	report->spo2_valid_percent = data->max32664_i2c_buffer[71];
++	report->spo2_low_signal_flag = data->max32664_i2c_buffer[72];
++	report->spo2_motion_flag = data->max32664_i2c_buffer[73];
++	report->spo2_low_pi_flag = data->max32664_i2c_buffer[74];
++	report->spo2_unreliable_r_flag = data->max32664_i2c_buffer[75];
++	report->spo2_state = data->max32664_i2c_buffer[76];
++	report->ibi_offset = data->max32664_i2c_buffer[77];
++	report->unreliable_orientation_flag = data->max32664_i2c_buffer[78];
++	report->reserved[0] = data->max32664_i2c_buffer[79];
++	report->reserved[1] = data->max32664_i2c_buffer[80];
++}
++#else
++/** @brief          Parse the buffer to get the report data from the sensor hub.
++ *  @param dev      Pointer to device
++ *  @param report   Pointer to report structure
++ */
++static void max32664c_parse_report(const struct device *dev, struct max32664c_report_t *report)
++{
++	struct max32664c_data *data = dev->data;
++
++	report->op_mode = data->max32664_i2c_buffer[25];
++	report->hr =
++		(((uint16_t)(data->max32664_i2c_buffer[26]) << 8) | data->max32664_i2c_buffer[27]) /
++		10;
++	report->hr_confidence = data->max32664_i2c_buffer[28];
++	report->rr =
++		(((uint16_t)(data->max32664_i2c_buffer[29]) << 8) | data->max32664_i2c_buffer[30]) /
++		10;
++	report->rr_confidence = data->max32664_i2c_buffer[31];
++	report->activity_class = data->max32664_i2c_buffer[32];
++	report->r =
++		(((uint16_t)(data->max32664_i2c_buffer[33]) << 8) | data->max32664_i2c_buffer[34]) /
++		1000;
++	report->spo2_confidence = data->max32664_i2c_buffer[35];
++	report->spo2 =
++		(((uint16_t)(data->max32664_i2c_buffer[36]) << 8) | data->max32664_i2c_buffer[37]) /
++		10;
++	report->spo2_complete = data->max32664_i2c_buffer[38];
++	report->spo2_low_signal_quality = data->max32664_i2c_buffer[39];
++	report->spo2_motion = data->max32664_i2c_buffer[40];
++	report->spo2_low_pi = data->max32664_i2c_buffer[41];
++	report->spo2_unreliable_r = data->max32664_i2c_buffer[42];
++	report->spo2_state = data->max32664_i2c_buffer[43];
++	report->scd_state = data->max32664_i2c_buffer[44];
++}
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++
++/** @brief      Worker thread to read the sensor hub.
++ *              This thread does the following:
++ *                  - It polls the sensor hub periodically for new results
++ *                  - If new messages are available it reads the number of samples
++ *                  - Then it reads all the samples to clear the FIFO.
++ *                    It's necessary to clear the complete FIFO because the sensor hub
++ *                    doesn´t support the reading of a single message and not clearing
++ *                    the FIFO can cause a FIFO overrun.
++ *                  - Extract the message data from the FIRST item from the FIFO and
++ *                    copy them into the right message structure
++ *                  - Put the message into a message queue
++ *  @param dev  Pointer to device
++ */
++void max32664c_worker(const struct device *dev)
++{
++	int err;
++	uint8_t fifo = 0;
++	uint8_t status = 0;
++	uint8_t i2c_error = 0;
++	struct max32664c_data *data = dev->data;
++
++	LOG_DBG("Starting worker thread for device: %s", dev->name);
++
++	while (data->is_thread_running) {
++		err = max32664c_get_hub_status(dev, &status, &i2c_error);
++		if (err) {
++			LOG_ERR("Failed to get hub status! Error: %d", err);
++			continue;
++		}
++
++		if (!(status & (1 << MAX32664C_BIT_STATUS_DATA_RDY))) {
++			LOG_WRN("No data ready! Status: 0x%X", status);
++			k_msleep(100);
++			continue;
++		}
++
++		err = max32664c_get_fifo_count(dev, &fifo);
++		if (err) {
++			LOG_ERR("Failed to get FIFO count! Error: %d", err);
++			continue;
++		}
++
++		if (fifo == 0) {
++			LOG_DBG("No data available in the FIFO.");
++			continue;
++		}
++
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++		size_t buffer_size = fifo * (sizeof(struct max32664c_raw_report_t) +
++							sizeof(struct max32664c_ext_report_t)) +
++						1;
++#else
++		size_t buffer_size = fifo * (sizeof(struct max32664c_raw_report_t) +
++							sizeof(struct max32664c_report_t)) +
++						1;
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++
++		LOG_DBG("Allocating memory for the I2C buffer with size: %u", buffer_size);
++		data->max32664_i2c_buffer = (uint8_t *)k_malloc(buffer_size);
++
++		if (data->max32664_i2c_buffer == NULL) {
++			LOG_ERR("Can not allocate memory for the I2C buffer!");
++			continue;
++		}
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++
++		uint8_t tx[2] = {0x12, 0x01};
++
++		if (data->op_mode == MAX32664C_OP_MODE_RAW) {
++			struct max32664c_raw_report_t raw_data;
++
++			/* Get all samples to clear the FIFO */
++			max32664c_i2c_transmit(
++				dev, tx, 2, data->max32664_i2c_buffer,
++				fifo * sizeof(struct max32664c_raw_report_t) + 1,
++				MAX32664C_DEFAULT_CMD_DELAY);
++
++			if (data->max32664_i2c_buffer[0] == 0) {
++				max32664c_parse_raw(dev, &raw_data);
++
++				while (k_msgq_put(&data->raw_report_queue, &raw_data,
++							K_NO_WAIT) != 0) {
++					k_msgq_purge(&data->raw_report_queue);
++				}
++			} else {
++				LOG_ERR("Can not read raw data! Status: 0x%X",
++					data->max32664_i2c_buffer[0]);
++			}
++		} else if (data->op_mode == MAX32664C_OP_MODE_SCD) {
++			struct max32664c_scd_report_t scd_data;
++
++			/* Get all samples to clear the FIFO */
++			max32664c_i2c_transmit(
++				dev, tx, 2, data->max32664_i2c_buffer,
++				fifo * sizeof(struct max32664c_scd_report_t) + 1,
++				MAX32664C_DEFAULT_CMD_DELAY);
++
++			if (data->max32664_i2c_buffer[0] == 0) {
++				scd_data.scd_classifier = data->max32664_i2c_buffer[1];
++
++				while (k_msgq_put(&data->scd_report_queue, &scd_data,
++							K_NO_WAIT) != 0) {
++					k_msgq_purge(&data->scd_report_queue);
++				}
++			} else {
++				LOG_ERR("Can not read scd data! Status: 0x%X",
++					data->max32664_i2c_buffer[0]);
++			}
++		}
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++		else if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC_EXT) ||
++				(data->op_mode == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
++			struct max32664c_raw_report_t raw_data;
++			struct max32664c_ext_report_t ext_report_data;
++
++			/* Get all samples to clear the FIFO */
++			max32664c_i2c_transmit(
++				dev, tx, 2, data->max32664_i2c_buffer,
++				(fifo * (sizeof(struct max32664c_raw_report_t) +
++						sizeof(struct max32664c_ext_report_t))) +
++					1,
++				MAX32664C_DEFAULT_CMD_DELAY);
++
++			if (data->max32664_i2c_buffer[0] == 0) {
++				max32664c_parse_raw(dev, &raw_data);
++				max32664c_parse_ext_report(dev, &ext_report_data);
++
++			} else {
++				LOG_ERR("Can not read report! Status: 0x%X",
++					data->max32664_i2c_buffer[0]);
++			}
++		}
++#else
++		else if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC) ||
++				(data->op_mode == MAX32664C_OP_MODE_ALGO_AGC)) {
++			struct max32664c_raw_report_t raw_data;
++			struct max32664c_report_t report_data;
++
++			/* Get all samples to clear the FIFO */
++			max32664c_i2c_transmit(
++				dev, tx, 2, data->max32664_i2c_buffer,
++				(fifo * (sizeof(struct max32664c_raw_report_t) +
++						sizeof(struct max32664c_report_t))) +
++					1,
++				MAX32664C_DEFAULT_CMD_DELAY);
++
++			if (data->max32664_i2c_buffer[0] == 0) {
++				max32664c_parse_raw(dev, &raw_data);
++				max32664c_parse_report(dev, &report_data);
++
++				while (k_msgq_put(&data->raw_report_queue, &raw_data,
++							K_NO_WAIT) != 0) {
++					k_msgq_purge(&data->raw_report_queue);
++				}
++
++				while (k_msgq_put(&data->report_queue, &report_data,
++							K_NO_WAIT) != 0) {
++					k_msgq_purge(&data->report_queue);
++				}
++			} else {
++				LOG_ERR("Can not read report! Status: 0x%X",
++					data->max32664_i2c_buffer[0]);
++			}
++		}
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++
++#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++		k_free(data->max32664_i2c_buffer);
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++
++		k_msleep(100);
++	}
++}
+diff --git a/dts/bindings/sensor/maxim,max32664c.yml b/dts/bindings/sensor/maxim,max32664c.yml
+new file mode 100644
+index 00000000000..3f8c36c7749
+--- /dev/null
++++ b/dts/bindings/sensor/maxim,max32664c.yml
+@@ -0,0 +1,159 @@
++title: |
++  MAX32664 biometric sensor hub
++
++description: |
++  The MAX32664 is a ultra-low power biometric sensor hub.
++
++  NOTES:
++  This driver is primarily written to work with a MAX86141. Other sensors can be
++  used but they are untested! The driver supports up to two photodetectors (PDs)
++  and three LEDs fix. It requires a specific LED
++  configuration for the MAX86141.
++    LED1 -> Green
++    LED2 -> IR
++    LED3 -> Red
++  The LEDs can be changed manually but this may require changes in the driver.
++
++  This driver is tested with Sensor Hub firmware 30.13.31 and an external
++  Accelerometer (e.g. LIS2DH12).
++
++  See more info at:
++  https://www.analog.com/media/en/technical-documentation/data-sheets/MAX32664.pdf
++
++compatible: "maxim,max32664c"
++
++include: [sensor-device.yaml, i2c-device.yaml]
++
++properties:
++  reset-gpios:
++    type: phandle-array
++    required: true
++    description:
++      External System Reset (Active-Low) Input.
++
++  mfio-gpios:
++    type: phandle-array
++    required: true
++    description:
++      MFIO asserts low as an output when the sensor hub needs to
++      communication with the host; MFIO acts as an input and when held
++      low during a reset, the sensor hub enters bootloader mode.
++
++  use-max86141:
++    type: boolean
++    description:
++      Use the MAX86141 as the AFE for the MAX32664C. This is the
++      default and recommended configuration. The driver is optimized for
++      this sensor.
++
++  use-max86161:
++    type: boolean
++    description:
++      Use the MAX86161 as the AFE for the MAX32664C.
++
++  motion-time:
++    type: int
++    default: 200
++    description:
++      Sensor Hub configuration - Motion activation time in milliseconds.
++      The default corresponds to Table 12 in the HR and SpO2 User guide.
++
++  motion-threshold:
++    type: int
++    default: 500
++    description:
++      Sensor Hub configuration - Motion activation time in milli-g.
++      The default corresponds to Table 12 in the HR and SpO2 User guide.
++
++  report-period:
++    type: int
++    default: 1
++    description:
++      Sensor Hub configuration - Set the samples report period (e.g., a value
++      of 25 means a samples report is generated once every 25 samples).
++      The default corresponds to Table 16 in the HR and SpO2 User guide.
++
++  spo2-calib:
++    type: array
++    default: [0xFFE69196, 0x000CB735, 0x00989680]
++    description:
++      Algorithm configuration - SpO2 calibration coefficients.
++      The default corresponds to Table 12 in the HR and SpO2 User guide.
++
++  min-integration-time:
++    type: int
++    default: 14
++    enum:
++      - 14
++      - 29
++      - 58
++      - 117
++    description:
++      Algorithm configuration - Minimum integration time in microseconds.
++      The default corresponds to Table 11 in the HR and SpO2 User guide.
++
++  min-sampling-rate:
++    type: int
++    default: 50
++    enum:
++      - 25
++      - 50
++      - 100
++      - 200
++      - 400
++    description:
++      Algorithm configuration - Minimum sampling rate (samples per second)
++      and averaging (samples).
++      The default corresponds to Table 11 in the HR and SpO2 User guide.
++
++  max-integration-time:
++    type: int
++    default: 117
++    enum:
++      - 14
++      - 29
++      - 58
++      - 117
++    description:
++      Algorithm configuration - Maximum integration time in microseconds.
++      The default corresponds to Table 11 in the HR and SpO2 User guide.
++
++  max-sampling-rate:
++    type: int
++    default: 100
++    enum:
++      - 25
++      - 50
++      - 100
++      - 200
++      - 400
++    description:
++      Algorithm configuration - Maximum sampling rate (samples per second)
++      and averaging (samples).
++      The default corresponds to Table 11 in the HR and SpO2 User guide.
++
++  led-current:
++    type: uint8-array
++    default: [0x7F, 0x7F, 0x7F]
++    description:
++      Initial LED current configuration in bits. Please check the datasheet
++      of the attached AFE to determine the appropriate values.
++      The current can also be changed later by the firmware.
++      Index 0 corresponds to LED1, index 1 to LED2, and index 2 to LED3.
++      The default corresponds to Table 5 in the HR and SpO2 User guide.
++
++  hr-config:
++    type: uint8-array
++    default: [0x00, 0x01]
++    description:
++      Algorithm configuration - LED and PD configuration for the heartrate measurement.
++      The first entry configures channel 1, the second channel 2.
++      The default corresponds to Table 15 in the HR and SpO2 User guide.
++
++  spo2-config:
++    type: uint8-array
++    default: [0x10, 0x20]
++    description:
++      Algorithm configuration - LED and PD configuration for the SpO2 measurement.
++      The first entry configures the IR channel, the second the red channel.
++      The default corresponds to Table 15 in the HR and SpO2 User guide.
+diff --git a/include/zephyr/drivers/sensor/max32664c.h b/include/zephyr/drivers/sensor/max32664c.h
+new file mode 100644
+index 00000000000..128f15ead20
+--- /dev/null
++++ b/include/zephyr/drivers/sensor/max32664c.h
+@@ -0,0 +1,186 @@
++/*
++ * Copyright (c) 2025 Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#ifndef ZEPHYR_INCLUDE_DRIVERS_SENSOR_MAX32664C_H_
++#define ZEPHYR_INCLUDE_DRIVERS_SENSOR_MAX32664C_H_
++
++#include <zephyr/device.h>
++
++/** @brief Converts a motion time in milli-seconds to the corresponding value for the MAX32664C
++ * sensor. This macro should be used when configuring the motion based wake up settings for the
++ * sensor.
++ */
++#define MAX32664C_MOTION_TIME(ms) ((uint8_t)((ms * 25UL) / 1000))
++
++/** @brief Converts a motion threshold in milli-g (Acceleration) to the corresponding value for the
++ * MAX32664C sensor. This macro should be used when configuring the motion based wake up settings
++ * for the sensor.
++ */
++#define MAX32664C_MOTION_THRESHOLD(mg) ((uint8_t)((mg * 16UL) / 1000))
++
++/* MAX32664C specific channels */
++enum sensor_channel_max32664c {
++	/** Heart rate value (bpm) */
++	SENSOR_CHAN_MAX32664C_HEARTRATE = SENSOR_CHAN_PRIV_START,
++	/** SpO2 value (%) */
++	SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION,
++	/** Respiration rate (breaths per minute) */
++	SENSOR_CHAN_MAX32664C_RESPIRATION_RATE,
++	/** Skin contact (1 -> Skin contact, 0, no contact) */
++	SENSOR_CHAN_MAX32664C_SKIN_CONTACT,
++	/** Activity class (index). The reported index is vendor specific. */
++	SENSOR_CHAN_MAX32664C_ACTIVITY,
++	/** Step counter */
++	SENSOR_CHAN_MAX32664C_STEP_COUNTER,
++};
++
++/* MAX32664C specific attributes */
++enum sensor_attribute_max32664c {
++	/** Gender of the subject being monitored */
++	SENSOR_ATTR_MAX32664C_GENDER = SENSOR_ATTR_PRIV_START,
++	/** Age of the subject being monitored */
++	SENSOR_ATTR_MAX32664C_AGE,
++	/** Weight of the subject being monitored */
++	SENSOR_ATTR_MAX32664C_WEIGHT,
++	/** Height of the subject being monitored */
++	SENSOR_ATTR_MAX32664C_HEIGHT,
++	/** Get / Set the operation mode of a sensor. This can be used to
++	 * switch between different measurement modes when a sensor supports them.
++	 */
++	SENSOR_ATTR_MAX32664C_OP_MODE,
++};
++
++#ifdef __cplusplus
++extern "C" {
++#endif
++
++/** @brief Device operating modes for the MAX32664C sensor.
++ *
++ *  This enum defines the various operating modes that the MAX32664C sensor
++ *  can be configured to. These modes control the sensor's behavior and
++ *  functionality, such as calibration, idle state, raw data output, and
++ *  algorithm-based operations.
++ */
++enum max32664c_device_mode {
++	MAX32664C_OP_MODE_IDLE, /**< Idle mode, no algorithm, */
++				/**< sensors or wake on motion running */
++	MAX32664C_OP_MODE_RAW,  /**< Raw output mode */
++	/* For hardware testing purposes, the user may choose to start the sensor hub to collect
++	 * raw PPG samples. In this case, the host configures the sensor hub to work in Raw Data
++	 * mode (no algorithm) by enabling the accelerometer and the AFE.
++	 */
++	MAX32664C_OP_MODE_ALGO_AEC, /**< Algorithm AEC mode */
++	/* Automatic Exposure Control (AEC) is Maxim’s gain control algorithm that is superior to
++	 * AGC. The AEC algorithm optimally maintains the best SNR range and power optimization. The
++	 * targeted SNR range is maintained regardless of skin color or ambient temperature within
++	 * the limits of the LED currents configurations; The AEC dynamically manages the
++	 * appropriate register settings for sampling rate, LED current, pulse width and integration
++	 * time.
++	 */
++	MAX32664C_OP_MODE_ALGO_AEC_EXT, /**< Algorithm with extended reports */
++	MAX32664C_OP_MODE_ALGO_AGC,     /**< Algorithm AGC mode */
++	/* In this mode, the wearable algorithm suite (SpO2 and WHRM) is enabled and the R value,
++	 * SpO2, SpO2 confidence level, heart rate, heart rate confidence level, RR value, and
++	 * activity class are reported. Furthermore, automatic gain control (AGC) is enabled.
++	 * Because AGC is a subset of AEC functionality, to enable AGC, AEC still needs to be
++	 * enabled. However, automatic calculation of target PD should be turned off, and the
++	 * desired level of AGC target PD current is set by the user. The user may change the
++	 * algorithm to the desired configuration mode. If signal quality is poor, the user may need
++	 * to adjust the AGC settings to maintain optimal performance. If signal quality is low, a
++	 * LowSNR flag will be set. Excessive motion is also reported with a flag.
++	 */
++	MAX32664C_OP_MODE_ALGO_AGC_EXT,        /**< Algorithm AGC with extended reports */
++	MAX32664C_OP_MODE_SCD,                 /**< SCD only mode */
++	MAX32664C_OP_MODE_WAKE_ON_MOTION,      /**< Wake on motion mode */
++	MAX32664C_OP_MODE_EXIT_WAKE_ON_MOTION, /**< Exit wake on motion mode */
++	MAX32664C_OP_MODE_STOP_ALGO,           /**< Stop the current algorithm */
++};
++
++/** @brief Algorithm modes for the MAX32664C sensor.
++ *
++ *  This enum defines the various algorithm modes supported by the MAX32664C sensor.
++ *  These modes determine the type of data processing performed by the sensor,
++ *  such as continuous heart rate monitoring, SpO2 calculation, or activity tracking.
++ */
++enum max32664c_algo_mode {
++	MAX32664C_ALGO_MODE_CONT_HR_CONT_SPO2,
++	MAX32664C_ALGO_MODE_CONT_HR_SHOT_SPO2,
++	MAX32664C_ALGO_MODE_CONT_HRM,
++	/* NOTE: These algorithm modes are untested */
++	/*MAX32664C_ALGO_MODE_SAMPLED_HRM,*/
++	/*MAX32664C_ALGO_MODE_SAMPLED_HRM_SHOT_SPO2,*/
++	/*MAX32664C_ALGO_MODE_ACTIVITY_TRACK,*/
++	/*MAX32664C_ALGO_MODE_SAMPLED_HRM_FAST_SPO2 = 7,*/
++};
++
++/** @brief Gender settings for the MAX32664C sensor.
++ *
++ *  This enum defines the supported gender settings for the MAX32664C sensor.
++ */
++enum max32664c_algo_gender {
++	MAX32664_ALGO_GENDER_MALE,
++	MAX32664_ALGO_GENDER_FEMALE,
++};
++
++/** @brief Activity classes for the MAX32664C sensor.
++ *
++ *  This enum defines the supported activity classes for the MAX32664C sensor.
++ */
++enum max32664c_algo_activity {
++	MAX32664C_ALGO_ACTIVITY_REST,
++	MAX32664C_ALGO_ACTIVITY_OTHER,
++	MAX32664C_ALGO_ACTIVITY_WALK,
++	MAX32664C_ALGO_ACTIVITY_RUN,
++	MAX32664C_ALGO_ACTIVITY_BIKE,
++};
++
++/** @brief Data structure for external accelerometer data.
++ *
++ * This structure is used to represent the accelerometer data that can be
++ * collected from an external accelerometer and then fed into the MAX32664C
++ * sensor hub. It contains the x, y, and z acceleration values.
++ * This structure is only used when the external accelerometer is enabled.
++ */
++struct max32664c_acc_data_t {
++	int16_t x;
++	int16_t y;
++	int16_t z;
++} __packed;
++
++#ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
++/** @brief          Enter the bootloader mode and run a firmware update.
++ *  @param dev      Pointer to device
++ *  @param firmware Pointer to firmware data
++ *  @param size     Size of the firmware
++ *  @return         0 when successful
++ */
++int max32664c_bl_enter(const struct device *dev, const uint8_t *firmware, uint32_t size);
++
++/** @brief          Leave the bootloader and enter the application mode.
++ *  @param dev      Pointer to device
++ *  @return         0 when successful
++ */
++int max32664c_bl_leave(const struct device *dev);
++#endif /* CONFIG_MAX32664C_USE_FIRMWARE_LOADER */
++
++#ifdef CONFIG_MAX32664C_USE_EXTERNAL_ACC
++/** @brief          Fill the FIFO buffer with accelerometer data
++ *                  NOTE: This function supports up to 16 samples and it must be called
++ *                  periodically to provide accelerometer data to the MAX32664C!
++ *  @param dev      Pointer to device
++ *  @param data     Pointer to the accelerometer data structure
++ *  @param length   Number of samples to fill
++ *  @return         0 when successful
++ */
++int max32664c_acc_fill_fifo(const struct device *dev, struct max32664c_acc_data_t *data,
++			    uint8_t length);
++#endif /* CONFIG_MAX32664C_USE_EXTERNAL_ACC*/
++
++#ifdef __cplusplus
++}
++#endif
++
++#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_MAX32664C_H_ */
+diff --git a/samples/sensor/max32664c/CMakeLists.txt b/samples/sensor/max32664c/CMakeLists.txt
+new file mode 100644
+index 00000000000..4992762f91c
+--- /dev/null
++++ b/samples/sensor/max32664c/CMakeLists.txt
+@@ -0,0 +1,7 @@
++# SPDX-License-Identifier: Apache-2.0
++
++cmake_minimum_required(VERSION 3.20.0)
++find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
++project(max32664c)
++
++target_sources(app PRIVATE src/main.c)
+diff --git a/samples/sensor/max32664c/README.rst b/samples/sensor/max32664c/README.rst
+new file mode 100644
+index 00000000000..bc66998b867
+--- /dev/null
++++ b/samples/sensor/max32664c/README.rst
+@@ -0,0 +1,46 @@
++.. zephyr:code-sample:: max32664c
++   :name: MAX32664C + MAX86141 Sensor Hub
++   :relevant-api: sensor_interface
++
++Get health data from a MAX32664C and a MAX86141 sensor (polling mode).
++
++NOTE: This example requires sensor hub firmware 30.13.31!
++
++Overview
++********
++
++This sample measures the heart rate and the blood oxygen saturation on a wrist.
++It uses the MAX32664C sensor to control the MAX86141 sensor.
++
++Requirements
++************
++
++This sample uses the MAX32664 sensor controlled using the I2C30 interface at
++the nRF54L15-DK board.
++
++References
++**********
++
++- MAX32664C: https://www.analog.com/en/products/max32664.html
++
++Building and Running
++********************
++
++This project outputs sensor data to the console. It requires a MAX32664C
++sensor to be connected to the desired board. An additional MAX86141 sensor
++must be connected to the MAX32664C to provide the sensor data for the algorithms.
++
++.. zephyr-app-commands::
++   :zephyr-app: samples/sensor/max32664c/
++   :goals: build flash
++
++Sample Output
++=============
++
++.. code-block:: console
++
++    [00:00:00.000,000] <inf> sensor: MAX32664C: Initializing...
++    [00:00:01.600,000] <inf> sensor: MAX32664C: Initialization complete.
++    [00:00:01.600,000] <inf> sensor: MAX32664C: Heart rate: 75 bpm, SpO2: 98%
++    [00:00:02.600,000] <inf> sensor: MAX32664C: Heart rate: 76 bpm, SpO2: 97%
++    [00:00:03.600,000] <inf> sensor: MAX32664C: Heart rate: 74 bpm, SpO2: 98%
+diff --git a/samples/sensor/max32664c/boards/nrf54l15dk_nrf54l15_cpuapp.overlay b/samples/sensor/max32664c/boards/nrf54l15dk_nrf54l15_cpuapp.overlay
+new file mode 100644
+index 00000000000..92d64ae9653
+--- /dev/null
++++ b/samples/sensor/max32664c/boards/nrf54l15dk_nrf54l15_cpuapp.overlay
+@@ -0,0 +1,79 @@
++/*
++ * Copyright (c) 2025 Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++&pinctrl {
++	i2c30_default: i2c30_default {
++		group1 {
++			psels = <NRF_PSEL(TWIM_SDA, 0, 4)>,
++					<NRF_PSEL(TWIM_SCL, 0, 3)>;
++					bias-pull-up;
++		};
++	};
++
++	i2c30_sleep: i2c30_sleep {
++		group1 {
++			psels = <NRF_PSEL(TWIM_SDA, 0, 4)>,
++					<NRF_PSEL(TWIM_SCL, 0, 3)>;
++					low-power-enable;
++		};
++	};
++};
++
++/ {
++	aliases {
++		sensor = &biometric_hub;
++	};
++};
++
++&i2c30 {
++	compatible = "nordic,nrf-twim";
++	status = "okay";
++	clock-frequency = <I2C_BITRATE_FAST>;
++
++	// Flash buffer size is needed for the I2C bootloader to flash the firmware
++	zephyr,flash-buf-max-size = <8250>;
++
++	pinctrl-0 = <&i2c30_default>;
++	pinctrl-1 = <&i2c30_sleep>;
++	pinctrl-names = "default", "sleep";
++
++	biometric_hub: max32664c@55 {
++		compatible = "maxim,max32664c";
++		reg = <0x55>;
++		status = "okay";
++		reset-gpios = <&gpio2 0 GPIO_ACTIVE_HIGH>;
++		mfio-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
++		use-max86141;
++	};
++};
++
++&dppic10 {
++	status = "okay";
++};
++
++&ppib11 {
++	status = "okay";
++};
++
++&ppib21 {
++	status = "okay";
++};
++
++&dppic20 {
++	status = "okay";
++};
++
++&ppib22 {
++	status = "okay";
++};
++
++&ppib30 {
++	status = "okay";
++};
++
++&dppic30 {
++	status = "okay";
++};
+diff --git a/samples/sensor/max32664c/prj.conf b/samples/sensor/max32664c/prj.conf
+new file mode 100644
+index 00000000000..653e8d1b0cf
+--- /dev/null
++++ b/samples/sensor/max32664c/prj.conf
+@@ -0,0 +1,7 @@
++CONFIG_I2C=y
++CONFIG_SENSOR=y
++
++CONFIG_LOG=y
++CONFIG_LOG_PRINTK=y
++
++CONFIG_HEAP_MEM_POOL_SIZE=16384
+diff --git a/samples/sensor/max32664c/sample.yaml b/samples/sensor/max32664c/sample.yaml
+new file mode 100644
+index 00000000000..e5158267523
+--- /dev/null
++++ b/samples/sensor/max32664c/sample.yaml
+@@ -0,0 +1,15 @@
++sample:
++  name: MAX32664C heart rate monitor sample
++tests:
++  sample.sensor.max32664c:
++    harness: sensor
++    platform_allow:
++      - nrf54l15dk/nrf54l15/cpuapp
++    integration_platforms:
++      - nrf54l15dk/nrf54l15/cpuapp
++    tags:
++      - sensors
++      - heart rate
++    filter: dt_compat_enabled("maxim,max32664c")
++    depends_on:
++      - i2c
+diff --git a/samples/sensor/max32664c/src/main.c b/samples/sensor/max32664c/src/main.c
+new file mode 100644
+index 00000000000..d02c0588ab3
+--- /dev/null
++++ b/samples/sensor/max32664c/src/main.c
+@@ -0,0 +1,75 @@
++/*
++ * Copyright (c) 2025 Daniel Kampert
++ *
++ * SPDX-License-Identifier: Apache-2.0
++ */
++
++#include <zephyr/kernel.h>
++#include <zephyr/devicetree.h>
++#include <zephyr/logging/log.h>
++#include <zephyr/drivers/sensor.h>
++
++#include <zephyr/drivers/sensor/max32664c.h>
++
++static const struct device *const sensor_hub = DEVICE_DT_GET(DT_ALIAS(sensor));
++
++LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
++
++static void update(void)
++{
++	struct sensor_value value;
++
++	sensor_sample_fetch(sensor_hub);
++	sensor_attr_get(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, SENSOR_ATTR_MAX32664C_OP_MODE,
++			&value);
++	if (value.val1 == MAX32664C_OP_MODE_RAW) {
++		struct sensor_value x;
++		struct sensor_value y;
++		struct sensor_value z;
++
++		if (sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_X, &x) ||
++		    sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Y, &y) ||
++		    sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Z, &z)) {
++			LOG_ERR("Failed to get accelerometer data");
++			return;
++		}
++
++		LOG_INF("\tx: %i", x.val1);
++		LOG_INF("\ty: %i", y.val1);
++		LOG_INF("\tz: %i", z.val1);
++	} else if (value.val1 == MAX32664C_OP_MODE_ALGO_AEC) {
++		struct sensor_value hr;
++
++		if (sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, &hr)) {
++			LOG_ERR("Failed to get heart rate data");
++			return;
++		}
++
++		LOG_INF("HR: %u bpm", hr.val1);
++		LOG_INF("HR Confidence: %u", hr.val2);
++	}
++}
++
++int main(void)
++{
++	struct sensor_value value;
++
++	if (!device_is_ready(sensor_hub)) {
++		LOG_ERR("Sensor hub not ready!");
++		return -1;
++	}
++
++	LOG_INF("Sensor hub ready");
++
++	value.val1 = MAX32664C_OP_MODE_ALGO_AEC;
++	value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
++	sensor_attr_set(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, SENSOR_ATTR_MAX32664C_OP_MODE,
++			&value);
++
++	while (1) {
++		update();
++		k_msleep(1000);
++	}
++
++	return 0;
++}
+-- 
+2.34.1
+

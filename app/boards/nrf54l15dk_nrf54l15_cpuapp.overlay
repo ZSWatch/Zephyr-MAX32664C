@@ -48,7 +48,7 @@
 		mfio-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
 		hr-config = [00 11];
 		spo2-config = [10 20];
-		use-skin-contact-detection;
+		led-current = [3F 3F 3F];
 		use-max86141;
 	};
 };
