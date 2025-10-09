@@ -133,6 +133,16 @@ static void hrs_notify(void)
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
         }
+    } else if ((value.val1 == MAX32664C_OP_MODE_ALGO_AEC_EXT) || (value.val1 == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
+        struct sensor_value hr;
+
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, &hr);
+        LOG_INF("HR: %u", hr.val1);
+        LOG_INF("Confidence: %u", hr.val2);
+
+        if (hrf_ntf_enabled) {
+            bt_hrs_notify(hr.val1);
+        }
     }
 }
 
@@ -179,7 +189,7 @@ int main(void)
     LOG_INF("Advertising successfully started");
 
     //value.val1 = MAX32664C_OP_MODE_RAW;
-    value.val1 = MAX32664C_OP_MODE_ALGO_AGC;
+    value.val1 = MAX32664C_OP_MODE_ALGO_AGC_EXT;
     value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
     sensor_attr_set(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, SENSOR_ATTR_MAX32664C_OP_MODE, &value);
 

@@ -1,4 +1,4 @@
-From fab75926e648b3150cc04df796543a100965857d Mon Sep 17 00:00:00 2001
+From 1045f4325d45f6be331973a7618289a0e71c3a4c Mon Sep 17 00:00:00 2001
 From: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
 Date: Thu, 24 Jul 2025 13:52:32 +0000
 Subject: [PATCH] drivers: sensor: Add driver for MAX32664C
@@ -16,13 +16,13 @@ Signed-off-by: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
  drivers/sensor/adi/Kconfig                    |    1 +
  drivers/sensor/adi/max32664c/CMakeLists.txt   |   13 +
  drivers/sensor/adi/max32664c/Kconfig          |   45 +
- drivers/sensor/adi/max32664c/max32664c.c      | 1082 +++++++++++++++++
+ drivers/sensor/adi/max32664c/max32664c.c      | 1112 +++++++++++++++++
  drivers/sensor/adi/max32664c/max32664c.h      |  280 +++++
  drivers/sensor/adi/max32664c/max32664c_acc.c  |   58 +
- drivers/sensor/adi/max32664c/max32664c_bl.c   |  389 ++++++
+ drivers/sensor/adi/max32664c/max32664c_bl.c   |  383 ++++++
  drivers/sensor/adi/max32664c/max32664c_init.c |  246 ++++
  .../adi/max32664c/max32664c_interrupt.c       |   77 ++
- .../sensor/adi/max32664c/max32664c_worker.c   |  371 ++++++
+ .../sensor/adi/max32664c/max32664c_worker.c   |  349 ++++++
  dts/bindings/sensor/maxim,max32664c.yml       |  159 +++
  include/zephyr/drivers/sensor/max32664c.h     |  186 +++
  samples/sensor/max32664c/CMakeLists.txt       |    7 +
@@ -31,7 +31,7 @@ Signed-off-by: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
  samples/sensor/max32664c/prj.conf             |    7 +
  samples/sensor/max32664c/sample.yaml          |   15 +
  samples/sensor/max32664c/src/main.c           |   75 ++
- 19 files changed, 3137 insertions(+)
+ 19 files changed, 3139 insertions(+)
  create mode 100644 drivers/sensor/adi/max32664c/CMakeLists.txt
  create mode 100644 drivers/sensor/adi/max32664c/Kconfig
  create mode 100644 drivers/sensor/adi/max32664c/max32664c.c
@@ -142,10 +142,10 @@ index 00000000000..5b939fa826b
 +endif
 diff --git a/drivers/sensor/adi/max32664c/max32664c.c b/drivers/sensor/adi/max32664c/max32664c.c
 new file mode 100644
-index 00000000000..148a1a71a3b
+index 00000000000..86b8dfa9dea
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c.c
-@@ -0,0 +1,1082 @@
+@@ -0,0 +1,1112 @@
 +/*
 + * Copyright (c) 2025, Daniel Kampert
 + *
@@ -325,6 +325,8 @@ index 00000000000..148a1a71a3b
 +
 +	data->op_mode = MAX32664C_OP_MODE_IDLE;
 +
++	k_thread_suspend(data->thread_id);
++
 +	return 0;
 +}
 +
@@ -399,6 +401,8 @@ index 00000000000..148a1a71a3b
 +#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 +
 +	data->op_mode = MAX32664C_OP_MODE_RAW;
++
++	k_thread_resume(data->thread_id);
 +
 +	return 0;
 +}
@@ -561,11 +565,18 @@ index 00000000000..148a1a71a3b
 +	tx[1] = 0x07;
 +
 +	/* Use the maximum time to cover all modes (see Table 6 and 12 in the User Guide) */
-+	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 465)) {
++	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 500)) {
 +		return -EINVAL;
 +	}
 +
 +#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
++	if (k_msgq_alloc_init(&data->raw_report_queue, sizeof(struct max32664c_raw_report_t),
++			      CONFIG_MAX32664C_QUEUE_SIZE)) {
++		LOG_ERR("Failed to allocate RAW report queue!");
++		return -ENOMEM;
++	}
++
++	LOG_DBG("RAW report queue allocated!");
 +#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
 +	if (extended) {
 +		if (k_msgq_alloc_init(&data->ext_report_queue,
@@ -585,6 +596,8 @@ index 00000000000..148a1a71a3b
 +	}
 +#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 +#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
++
++	k_thread_resume(data->thread_id);
 +
 +	return 0;
 +}
@@ -639,6 +652,8 @@ index 00000000000..148a1a71a3b
 +#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 +
 +	data->op_mode = MAX32664C_OP_MODE_SCD;
++
++	k_thread_resume(data->thread_id);
 +
 +	return 0;
 +}
@@ -819,18 +834,33 @@ index 00000000000..148a1a71a3b
 +		break;
 +	}
 +	case SENSOR_CHAN_MAX32664C_HEARTRATE: {
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++		val->val1 = data->ext.hr;
++		val->val2 = data->ext.hr_confidence;
++#else
 +		val->val1 = data->report.hr;
 +		val->val2 = data->report.hr_confidence;
++#endif
 +		break;
 +	}
 +	case SENSOR_CHAN_MAX32664C_RESPIRATION_RATE: {
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++		val->val1 = data->ext.rr;
++		val->val2 = data->ext.rr_confidence;
++#else
 +		val->val1 = data->report.rr;
 +		val->val2 = data->report.rr_confidence;
++#endif
 +		break;
 +	}
 +	case SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION: {
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++		val->val1 = data->ext.spo2_value;
++		val->val2 = data->ext.spo2_confidence;
++#else
 +		val->val1 = data->report.spo2;
 +		val->val2 = data->report.spo2_confidence;
++#endif
 +		break;
 +	}
 +	case SENSOR_CHAN_MAX32664C_SKIN_CONTACT: {
@@ -1580,10 +1610,10 @@ index 00000000000..1b8dfc1b07d
 +#endif /* CONFIG_MAX32664C_USE_EXTERNAL_ACC */
 diff --git a/drivers/sensor/adi/max32664c/max32664c_bl.c b/drivers/sensor/adi/max32664c/max32664c_bl.c
 new file mode 100644
-index 00000000000..5dddc8d77e0
+index 00000000000..147c9aefe3b
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c_bl.c
-@@ -0,0 +1,389 @@
+@@ -0,0 +1,383 @@
 +/*
 + * I2C firmware loader for the MAX32664C biometric sensor hub.
 + *
@@ -1605,12 +1635,6 @@ index 00000000000..5dddc8d77e0
 +#define MAX32664C_FW_UPDATE_WRITE_SIZE (MAX32664C_FW_PAGE_SIZE + MAX32664C_FW_UPDATE_CRC_SIZE)
 +#define MAX32664C_DEFAULT_CMD_DELAY_MS 10
 +#define MAX32664C_PAGE_WRITE_DELAY_MS  680
-+
-+struct max32664c_config {
-+	struct i2c_dt_spec i2c;
-+	struct gpio_dt_spec reset_gpio;
-+	struct gpio_dt_spec mfio_gpio;
-+};
 +
 +static uint8_t max32664c_fw_init_vector[11];
 +static uint8_t max32664c_fw_auth_vector[16];
@@ -1975,7 +1999,7 @@ index 00000000000..5dddc8d77e0
 +}
 diff --git a/drivers/sensor/adi/max32664c/max32664c_init.c b/drivers/sensor/adi/max32664c/max32664c_init.c
 new file mode 100644
-index 00000000000..8c5f1b3d4a9
+index 00000000000..e65d2ec6af3
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c_init.c
 @@ -0,0 +1,246 @@
@@ -2200,7 +2224,7 @@ index 00000000000..8c5f1b3d4a9
 +					  K_THREAD_STACK_SIZEOF(data->thread_stack),
 +					  (k_thread_entry_t)max32664c_worker, (void *)dev, NULL,
 +					  NULL, K_LOWEST_APPLICATION_THREAD_PRIO, 0, K_NO_WAIT);
-+
++	k_thread_suspend(data->thread_id);
 +	k_thread_name_set(data->thread_id, "max32664c_worker");
 +
 +	LOG_DBG("Initial configuration:");
@@ -2310,10 +2334,10 @@ index 00000000000..957b5f17762
 +#endif /* CONFIG_MAX32664C_USE_INTERRUPT */
 diff --git a/drivers/sensor/adi/max32664c/max32664c_worker.c b/drivers/sensor/adi/max32664c/max32664c_worker.c
 new file mode 100644
-index 00000000000..063c1dee6c1
+index 00000000000..4e9519245d8
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c_worker.c
-@@ -0,0 +1,371 @@
+@@ -0,0 +1,349 @@
 +/*
 + * Background worker for the MAX32664C biometric sensor hub.
 + *
@@ -2557,18 +2581,28 @@ index 00000000000..063c1dee6c1
 +			LOG_DBG("No data available in the FIFO.");
 +			continue;
 +		}
++#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
++		else if (fifo > CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE) {
++			LOG_ERR("FIFO count %u exceeds maximum buffer size %u!", fifo,
++				CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE);
++
++			/* TODO: Find a good way to clear the FIFO */
++			continue;
++		}
++#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 +
 +#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
 +#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
 +		size_t buffer_size = fifo * (sizeof(struct max32664c_raw_report_t) +
-+							sizeof(struct max32664c_ext_report_t)) +
-+						1;
++					     sizeof(struct max32664c_ext_report_t)) +
++				     1;
 +#else
 +		size_t buffer_size = fifo * (sizeof(struct max32664c_raw_report_t) +
-+							sizeof(struct max32664c_report_t)) +
-+						1;
++					     sizeof(struct max32664c_report_t)) +
++				     1;
 +#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 +
++		LOG_DBG("Allocating memory %u samples", fifo);
 +		LOG_DBG("Allocating memory for the I2C buffer with size: %u", buffer_size);
 +		data->max32664_i2c_buffer = (uint8_t *)k_malloc(buffer_size);
 +
@@ -2581,64 +2615,33 @@ index 00000000000..063c1dee6c1
 +		uint8_t tx[2] = {0x12, 0x01};
 +
 +		if (data->op_mode == MAX32664C_OP_MODE_RAW) {
-+			struct max32664c_raw_report_t raw_data;
-+
-+			/* Get all samples to clear the FIFO */
-+			max32664c_i2c_transmit(
-+				dev, tx, 2, data->max32664_i2c_buffer,
-+				fifo * sizeof(struct max32664c_raw_report_t) + 1,
-+				MAX32664C_DEFAULT_CMD_DELAY);
-+
-+			if (data->max32664_i2c_buffer[0] == 0) {
-+				max32664c_parse_raw(dev, &raw_data);
-+
-+				while (k_msgq_put(&data->raw_report_queue, &raw_data,
-+							K_NO_WAIT) != 0) {
-+					k_msgq_purge(&data->raw_report_queue);
-+				}
-+			} else {
-+				LOG_ERR("Can not read raw data! Status: 0x%X",
-+					data->max32664_i2c_buffer[0]);
-+			}
-+		} else if (data->op_mode == MAX32664C_OP_MODE_SCD) {
-+			struct max32664c_scd_report_t scd_data;
-+
-+			/* Get all samples to clear the FIFO */
-+			max32664c_i2c_transmit(
-+				dev, tx, 2, data->max32664_i2c_buffer,
-+				fifo * sizeof(struct max32664c_scd_report_t) + 1,
-+				MAX32664C_DEFAULT_CMD_DELAY);
-+
-+			if (data->max32664_i2c_buffer[0] == 0) {
-+				scd_data.scd_classifier = data->max32664_i2c_buffer[1];
-+
-+				while (k_msgq_put(&data->scd_report_queue, &scd_data,
-+							K_NO_WAIT) != 0) {
-+					k_msgq_purge(&data->scd_report_queue);
-+				}
-+			} else {
-+				LOG_ERR("Can not read scd data! Status: 0x%X",
-+					data->max32664_i2c_buffer[0]);
-+			}
 +		}
 +#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
 +		else if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC_EXT) ||
-+				(data->op_mode == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
++			 (data->op_mode == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
 +			struct max32664c_raw_report_t raw_data;
 +			struct max32664c_ext_report_t ext_report_data;
 +
 +			/* Get all samples to clear the FIFO */
-+			max32664c_i2c_transmit(
-+				dev, tx, 2, data->max32664_i2c_buffer,
-+				(fifo * (sizeof(struct max32664c_raw_report_t) +
-+						sizeof(struct max32664c_ext_report_t))) +
-+					1,
-+				MAX32664C_DEFAULT_CMD_DELAY);
++			max32664c_i2c_transmit(dev, tx, 2, data->max32664_i2c_buffer,
++					       (fifo * (sizeof(struct max32664c_raw_report_t) +
++							sizeof(struct max32664c_ext_report_t))) +
++						       1,
++					       MAX32664C_DEFAULT_CMD_DELAY);
 +
 +			if (data->max32664_i2c_buffer[0] == 0) {
 +				max32664c_parse_raw(dev, &raw_data);
 +				max32664c_parse_ext_report(dev, &ext_report_data);
 +
++				while (k_msgq_put(&data->raw_report_queue, &raw_data, K_NO_WAIT) !=
++				       0) {
++					k_msgq_purge(&data->raw_report_queue);
++				}
++
++				while (k_msgq_put(&data->ext_report_queue, &ext_report_data,
++						  K_NO_WAIT) != 0) {
++					k_msgq_purge(&data->ext_report_queue);
++				}
 +			} else {
 +				LOG_ERR("Can not read report! Status: 0x%X",
 +					data->max32664_i2c_buffer[0]);
@@ -2646,29 +2649,28 @@ index 00000000000..063c1dee6c1
 +		}
 +#else
 +		else if ((data->op_mode == MAX32664C_OP_MODE_ALGO_AEC) ||
-+				(data->op_mode == MAX32664C_OP_MODE_ALGO_AGC)) {
++			 (data->op_mode == MAX32664C_OP_MODE_ALGO_AGC)) {
 +			struct max32664c_raw_report_t raw_data;
 +			struct max32664c_report_t report_data;
 +
 +			/* Get all samples to clear the FIFO */
-+			max32664c_i2c_transmit(
-+				dev, tx, 2, data->max32664_i2c_buffer,
-+				(fifo * (sizeof(struct max32664c_raw_report_t) +
-+						sizeof(struct max32664c_report_t))) +
-+					1,
-+				MAX32664C_DEFAULT_CMD_DELAY);
++			max32664c_i2c_transmit(dev, tx, 2, data->max32664_i2c_buffer,
++					       (fifo * (sizeof(struct max32664c_raw_report_t) +
++							sizeof(struct max32664c_report_t))) +
++						       1,
++					       MAX32664C_DEFAULT_CMD_DELAY);
 +
 +			if (data->max32664_i2c_buffer[0] == 0) {
 +				max32664c_parse_raw(dev, &raw_data);
 +				max32664c_parse_report(dev, &report_data);
 +
-+				while (k_msgq_put(&data->raw_report_queue, &raw_data,
-+							K_NO_WAIT) != 0) {
++				while (k_msgq_put(&data->raw_report_queue, &raw_data, K_NO_WAIT) !=
++				       0) {
 +					k_msgq_purge(&data->raw_report_queue);
 +				}
 +
-+				while (k_msgq_put(&data->report_queue, &report_data,
-+							K_NO_WAIT) != 0) {
++				while (k_msgq_put(&data->report_queue, &report_data, K_NO_WAIT) !=
++				       0) {
 +					k_msgq_purge(&data->report_queue);
 +				}
 +			} else {
