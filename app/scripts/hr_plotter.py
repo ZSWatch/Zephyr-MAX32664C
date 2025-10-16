@@ -16,21 +16,23 @@ import numpy as np
 
 def parse_log_file(file_path):
     """
-    Parse the log file and extract HR, Confidence, Skin Contact data, and button press events.
+    Parse the log file and extract HR, Confidence, Skin Contact, and Activity Class data.
     
     Returns:
-        dict: Contains lists of timestamps, hr, confidence, skin_contact values, and button_press_times
+        dict: Contains lists of timestamps, hr, confidence, skin_contact, and activity_class values
     """
     data = {
         'timestamps': [],
         'hr': [],
         'confidence': [],
         'skin_contact': [],
+        'activity_class': [],
         'button_press_times': []
     }
     
-    # Pattern to match lines like: A	18:30:28.576	"HR: 102 (Conf: 0) RR: 0 bpm SC: 1
-    hr_pattern = r'A\s+(\d{2}:\d{2}:\d{2}\.\d{3})\s+"HR:\s+(\d+)\s+\(Conf:\s+(\d+)\)\s+RR:\s+\d+\s+bpm\s+SC:\s+(\d+)'
+    # Pattern to match lines like: A	18:30:28.576	"HR: 102 (Conf: 0) RR: 0 bpm SC: 1 AC: 4294967295
+    # AC field is optional for backward compatibility
+    hr_pattern = r'A\s+(\d{2}:\d{2}:\d{2}\.\d{3})\s+"HR:\s+(\d+)\s+\(Conf:\s+(\d+)\)\s+RR:\s+\d+\s+bpm\s+SC:\s+(\d+)(?:\s+AC:\s+(\d+))?'
     
     # Pattern to match button press lines like: A	19:33:37.728	"[00:00:20.886,929] main: Button pressed!
     button_pattern = r'A\s+(\d{2}:\d{2}:\d{2}\.\d{3})\s+".*Button pressed!'
@@ -44,6 +46,7 @@ def parse_log_file(file_path):
                 hr = int(hr_match.group(2))
                 confidence = int(hr_match.group(3))
                 skin_contact = int(hr_match.group(4))
+                activity_class = int(hr_match.group(5)) if hr_match.group(5) else None
                 
                 # Parse timestamp
                 time_obj = datetime.strptime(timestamp_str, '%H:%M:%S.%f')
@@ -51,6 +54,7 @@ def parse_log_file(file_path):
                 data['hr'].append(hr)
                 data['confidence'].append(confidence)
                 data['skin_contact'].append(skin_contact)
+                data['activity_class'].append(activity_class)
             
             # Check for button press
             button_match = re.search(button_pattern, line)
@@ -117,8 +121,13 @@ def plot_data(data):
     # Calculate statistics
     stats = calculate_statistics(data)
     
-    # Create figure with 2 subplots
-    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(14, 10), sharex=True)
+    # Create figure with 3 subplots with custom height ratios
+    # HR gets 50% of height, Skin Contact and Activity Class each get 25%
+    fig = plt.figure(figsize=(14, 12))
+    gs = fig.add_gridspec(3, 1, height_ratios=[2, 1, 1], hspace=0.15)
+    ax1 = fig.add_subplot(gs[0])
+    ax2 = fig.add_subplot(gs[1], sharex=ax1)
+    ax3 = fig.add_subplot(gs[2], sharex=ax1)
     fig.suptitle('Heart Rate Sensor Data Analysis', fontsize=16, fontweight='bold')
     
     # Convert relative time to datetime objects for better x-axis formatting
@@ -211,9 +220,38 @@ def plot_data(data):
     
     ax2.legend(handles=legend_elements, loc='upper left', fontsize=9)
     
+    # Plot 3: Activity Class
+    # Filter out None and 0xFFFFFFFF (4294967295) values which are invalid
+    valid_ac_mask = [(ac is not None and ac != 4294967295) for ac in data['activity_class']]
+    valid_ac_times = [t for t, valid in zip(plot_times, valid_ac_mask) if valid]
+    valid_ac_values = [ac for ac, valid in zip(data['activity_class'], valid_ac_mask) if valid]
+
+    if valid_ac_values:
+        ax3.plot(valid_ac_times, valid_ac_values, 'o-', color='tab:purple', 
+                 label='Activity Class', linewidth=1.5, markersize=5, alpha=0.8)
+        ax3.set_ylabel('Activity Class', fontsize=12, fontweight='bold')
+        ax3.set_xlabel('Time', fontsize=12, fontweight='bold')
+        ax3.grid(True, alpha=0.3)
+        ax3.set_title('Activity Classification', fontsize=13, fontweight='bold')
+        ax3.legend(loc='upper left', fontsize=9)
+
+        # Add button press vertical lines to activity class plot
+        if data['button_press_times']:
+            for btn_time in button_plot_times:
+                ax3.axvline(x=btn_time, color='purple', linestyle='--', linewidth=2, alpha=0.7, label='_nolegend_')
+    else:
+        # No valid activity class data, show message
+        ax3.text(0.5, 0.5, 'No valid Activity Class data\n(all values are None or 0xFFFFFFFF)', 
+                 transform=ax3.transAxes, fontsize=12, ha='center', va='center', 
+                 bbox=dict(boxstyle='round', facecolor='lightgray', alpha=0.8))
+        ax3.set_ylabel('Activity Class', fontsize=12, fontweight='bold')
+        ax3.set_xlabel('Time', fontsize=12, fontweight='bold')
+        ax3.set_title('Activity Classification', fontsize=13, fontweight='bold')
+        ax3.grid(True, alpha=0.3)
+
     # Format x-axis to show time nicely
-    ax2.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
-    plt.setp(ax2.xaxis.get_majorticklabels(), rotation=45, ha='right')
+    ax3.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M:%S'))
+    plt.setp(ax3.xaxis.get_majorticklabels(), rotation=45, ha='right')
     
     # Add statistics text box
     stats_text = (
@@ -233,7 +271,8 @@ def plot_data(data):
     ax1.text(0.98, 0.97, stats_text, transform=ax1.transAxes, fontsize=9,
              verticalalignment='top', horizontalalignment='right', bbox=props, family='monospace')
     
-    plt.tight_layout()
+    # Adjust layout
+    plt.subplots_adjust(top=0.96, bottom=0.08)
     plt.show()
 
 
@@ -252,6 +291,13 @@ def main():
         print(f"Found {len(data['hr'])} data points")
         print(f"Time range: {data['timestamps'][0].strftime('%H:%M:%S')} - {data['timestamps'][-1].strftime('%H:%M:%S')}")
         
+        # Check for valid activity class data
+        valid_ac = [ac for ac in data['activity_class'] if ac is not None and ac != 4294967295]
+        if valid_ac:
+            print(f"Found {len(valid_ac)} valid Activity Class data points")
+        else:
+            print("No valid Activity Class data (all values are None or 0xFFFFFFFF)")
+
         if data['button_press_times']:
             print(f"Found {len(data['button_press_times'])} button press event(s)")
             for i, btn_time in enumerate(data['button_press_times'], 1):
