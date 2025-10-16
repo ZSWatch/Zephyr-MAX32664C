@@ -1,0 +1,32 @@
+Zephyr Heartrate Sensor (CA:4C:4E:34:B8:0F)
+I	19:33:30.000	Connection established
+A	19:33:32.454	"HR: 75 (Conf: 100) RR: 0 bpm SC: 3
+" received
+A	19:33:33.474	"HR: 76 (Conf: 100) RR: 0 bpm SC: 3
+" received
+A	19:33:34.524	"HR: 77 (Conf: 95) RR: 0 bpm SC: 3
+" received
+A	19:33:35.519	"HR: 78 (Conf: 90) RR: 0 bpm SC: 3
+" received
+A	19:33:36.508	"HR: 79 (Conf: 85) RR: 0 bpm SC: 3
+" received
+A	19:33:37.728	"[00:00:20.886,929] main: Button pressed!
+" received
+A	19:33:37.557	"HR: 80 (Conf: 80) RR: 0 bpm SC: 3
+" received
+A	19:33:38.576	"HR: 82 (Conf: 75) RR: 0 bpm SC: 3
+" received
+A	19:33:39.569	"HR: 85 (Conf: 70) RR: 0 bpm SC: 3
+" received
+A	19:33:39.983	"[00:00:23.088,526] main: Button pressed!
+" received
+A	19:33:40.557	"HR: 88 (Conf: 65) RR: 0 bpm SC: 3
+" received
+A	19:33:41.612	"HR: 90 (Conf: 60) RR: 0 bpm SC: 2
+" received
+A	19:33:42.654	"HR: 92 (Conf: 55) RR: 0 bpm SC: 2
+" received
+A	19:33:43.711	"HR: 85 (Conf: 50) RR: 0 bpm SC: 1
+" received
+A	19:33:44.711	"HR: 80 (Conf: 45) RR: 0 bpm SC: 3
+" received
