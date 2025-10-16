@@ -1,5 +1,21 @@
+From 69ba7dd61ad71139d708ff8fda22faa2e794649b Mon Sep 17 00:00:00 2001
+From: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
+Date: Thu, 16 Oct 2025 15:02:57 +0200
+Subject: [PATCH 2/2] drivers: sensors: MAX32664C improvements
+
+- Add function to read the firmware version
+- Fix broken SCD sensor reading
+- Add SCD mode to worker
+
+Signed-off-by: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
+---
+ drivers/sensor/adi/max32664c/max32664c.c      | 51 ++++++++++++++++---
+ drivers/sensor/adi/max32664c/max32664c_bl.c   |  8 ++-
+ .../sensor/adi/max32664c/max32664c_worker.c   |  3 ++
+ 3 files changed, 50 insertions(+), 12 deletions(-)
+
 diff --git a/drivers/sensor/adi/max32664c/max32664c.c b/drivers/sensor/adi/max32664c/max32664c.c
-index 99d89cc655b..b1647bf27c9 100644
+index 99d89cc655b..4efdb426029 100644
 --- a/drivers/sensor/adi/max32664c/max32664c.c
 +++ b/drivers/sensor/adi/max32664c/max32664c.c
 @@ -51,6 +51,26 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx
@@ -29,7 +45,38 @@ index 99d89cc655b..b1647bf27c9 100644
  /** @brief      Check the accelerometer and AFE WHOAMI registers.
   *              This function is called during device initialization.
   *  @param dev  Pointer to device
-@@ -984,15 +1004,10 @@ static int max32664c_init(const struct device *dev)
+@@ -711,7 +731,29 @@ static int max32664c_channel_get(const struct device *dev, enum sensor_channel c
+ 		break;
+ 	}
+ 	case SENSOR_CHAN_MAX32664C_SKIN_CONTACT: {
+-		val->val1 = data->report.scd_state;
++		switch (data->op_mode) {
++			case MAX32664C_OP_MODE_SCD: {
++				val->val1 = data->scd.scd_classifier;
++				break;
++			}
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++			case MAX32664C_OP_MODE_ALGO_AEC_EXT:
++			case MAX32664C_OP_MODE_ALGO_AGC_EXT: {
++				val->val1 = data->ext.scd_state;
++				break;
++			}
++#else
++			case MAX32664C_OP_MODE_ALGO_AEC:
++			case MAX32664C_OP_MODE_ALGO_AGC: {
++				val->val1 = data->report.scd_state;
++				break;
++			}
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++			default: {
++				return -ENOTSUP;
++			}
++		}
++
+ 		break;
+ 	}
+ 	default: {
+@@ -984,15 +1026,10 @@ static int max32664c_init(const struct device *dev)
  		return -EINVAL;
  	}
  
@@ -75,23 +122,20 @@ index 147c9aefe3b..5da370f64c9 100644
  
  	return 0;
  }
-diff --git a/include/zephyr/drivers/sensor/max32664c.h b/include/zephyr/drivers/sensor/max32664c.h
-index 128f15ead20..2879abc68ad 100644
---- a/include/zephyr/drivers/sensor/max32664c.h
-+++ b/include/zephyr/drivers/sensor/max32664c.h
-@@ -166,6 +166,15 @@ int max32664c_bl_enter(const struct device *dev, const uint8_t *firmware, uint32
- int max32664c_bl_leave(const struct device *dev);
- #endif /* CONFIG_MAX32664C_USE_FIRMWARE_LOADER */
- 
-+/** @brief          Read the firmware version from the sensor hub.
-+ *  @param dev      Pointer to device
-+ *  @param major    Pointer to store major version
-+ *  @param minor    Pointer to store minor version
-+ *  @param patch    Pointer to store patch version
-+ *  @return         0 when successful
-+ */
-+int max32664c_read_fw_version(const struct device *dev, uint8_t *major, uint8_t *minor,
-+				     uint8_t *patch);
- #ifdef CONFIG_MAX32664C_USE_EXTERNAL_ACC
- /** @brief          Fill the FIFO buffer with accelerometer data
-  *                  NOTE: This function supports up to 16 samples and it must be called
+diff --git a/drivers/sensor/adi/max32664c/max32664c_worker.c b/drivers/sensor/adi/max32664c/max32664c_worker.c
+index 4943c621919..a9b12bb1eea 100644
+--- a/drivers/sensor/adi/max32664c/max32664c_worker.c
++++ b/drivers/sensor/adi/max32664c/max32664c_worker.c
+@@ -350,6 +350,9 @@ void max32664c_worker(const struct device *dev)
+ 			break;
+ 		}
+ #endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++		case MAX32664C_OP_MODE_SCD: {
++			/* Get all samples to clear the FIFO */
++		}
+ 		default: {
+ 			break;
+ 		}
+-- 
+2.34.1
+

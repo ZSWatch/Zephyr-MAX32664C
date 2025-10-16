@@ -1,7 +1,7 @@
 From 6d8f963091acd560c8f160d713773952fc92ac18 Mon Sep 17 00:00:00 2001
 From: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
 Date: Thu, 24 Jul 2025 13:52:32 +0000
-Subject: [PATCH] drivers: sensor: Add driver for MAX32664C
+Subject: [PATCH 1/2] drivers: sensor: Add driver for MAX32664C
 
 - Add DTS for MAX32664C
 - Add driver for MAX32664C
@@ -51,7 +51,7 @@ Signed-off-by: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
  create mode 100644 samples/sensor/max32664c/src/main.c
 
 diff --git a/drivers/sensor/adi/CMakeLists.txt b/drivers/sensor/adi/CMakeLists.txt
-index f0bb5910cf972..e524f38dc5e68 100644
+index f0bb5910cf9..e524f38dc5e 100644
 --- a/drivers/sensor/adi/CMakeLists.txt
 +++ b/drivers/sensor/adi/CMakeLists.txt
 @@ -10,4 +10,5 @@ add_subdirectory_ifdef(CONFIG_ADXL345 adxl345)
@@ -61,7 +61,7 @@ index f0bb5910cf972..e524f38dc5e68 100644
 +add_subdirectory_ifdef(CONFIG_SENSOR_MAX32664C max32664c)
  # zephyr-keep-sorted-stop
 diff --git a/drivers/sensor/adi/Kconfig b/drivers/sensor/adi/Kconfig
-index dea030c68034d..d0812de2dcee4 100644
+index dea030c6803..d0812de2dce 100644
 --- a/drivers/sensor/adi/Kconfig
 +++ b/drivers/sensor/adi/Kconfig
 @@ -10,4 +10,5 @@ source "drivers/sensor/adi/adxl345/Kconfig"
@@ -72,7 +72,7 @@ index dea030c68034d..d0812de2dcee4 100644
  # zephyr-keep-sorted-stop
 diff --git a/drivers/sensor/adi/max32664c/CMakeLists.txt b/drivers/sensor/adi/max32664c/CMakeLists.txt
 new file mode 100644
-index 0000000000000..b36663c699fa7
+index 00000000000..b36663c699f
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/CMakeLists.txt
 @@ -0,0 +1,13 @@
@@ -91,7 +91,7 @@ index 0000000000000..b36663c699fa7
 +                                             )
 diff --git a/drivers/sensor/adi/max32664c/Kconfig b/drivers/sensor/adi/max32664c/Kconfig
 new file mode 100644
-index 0000000000000..5b939fa826ba3
+index 00000000000..5b939fa826b
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/Kconfig
 @@ -0,0 +1,45 @@
@@ -142,7 +142,7 @@ index 0000000000000..5b939fa826ba3
 +endif
 diff --git a/drivers/sensor/adi/max32664c/max32664c.c b/drivers/sensor/adi/max32664c/max32664c.c
 new file mode 100644
-index 0000000000000..99d89cc655b88
+index 00000000000..99d89cc655b
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c.c
 @@ -0,0 +1,1101 @@
@@ -1249,7 +1249,7 @@ index 0000000000000..99d89cc655b88
 +DT_INST_FOREACH_STATUS_OKAY(MAX32664C_INIT)
 diff --git a/drivers/sensor/adi/max32664c/max32664c.h b/drivers/sensor/adi/max32664c/max32664c.h
 new file mode 100644
-index 0000000000000..facca74416dec
+index 00000000000..facca74416d
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c.h
 @@ -0,0 +1,294 @@
@@ -1549,7 +1549,7 @@ index 0000000000000..facca74416dec
 +#endif /* CONFIG_MAX32664C_USE_INTERRUPT */
 diff --git a/drivers/sensor/adi/max32664c/max32664c_acc.c b/drivers/sensor/adi/max32664c/max32664c_acc.c
 new file mode 100644
-index 0000000000000..1b8dfc1b07d1c
+index 00000000000..1b8dfc1b07d
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c_acc.c
 @@ -0,0 +1,58 @@
@@ -1613,7 +1613,7 @@ index 0000000000000..1b8dfc1b07d1c
 +#endif /* CONFIG_MAX32664C_USE_EXTERNAL_ACC */
 diff --git a/drivers/sensor/adi/max32664c/max32664c_bl.c b/drivers/sensor/adi/max32664c/max32664c_bl.c
 new file mode 100644
-index 0000000000000..147c9aefe3bdf
+index 00000000000..147c9aefe3b
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c_bl.c
 @@ -0,0 +1,383 @@
@@ -2002,7 +2002,7 @@ index 0000000000000..147c9aefe3bdf
 +}
 diff --git a/drivers/sensor/adi/max32664c/max32664c_init.c b/drivers/sensor/adi/max32664c/max32664c_init.c
 new file mode 100644
-index 0000000000000..e65d2ec6af3c4
+index 00000000000..e65d2ec6af3
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c_init.c
 @@ -0,0 +1,246 @@
@@ -2254,7 +2254,7 @@ index 0000000000000..e65d2ec6af3c4
 +}
 diff --git a/drivers/sensor/adi/max32664c/max32664c_interrupt.c b/drivers/sensor/adi/max32664c/max32664c_interrupt.c
 new file mode 100644
-index 0000000000000..492cdf3e639db
+index 00000000000..492cdf3e639
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c_interrupt.c
 @@ -0,0 +1,80 @@
@@ -2340,7 +2340,7 @@ index 0000000000000..492cdf3e639db
 +#endif /* CONFIG_MAX32664C_USE_INTERRUPT */
 diff --git a/drivers/sensor/adi/max32664c/max32664c_worker.c b/drivers/sensor/adi/max32664c/max32664c_worker.c
 new file mode 100644
-index 0000000000000..4943c62191909
+index 00000000000..4943c621919
 --- /dev/null
 +++ b/drivers/sensor/adi/max32664c/max32664c_worker.c
 @@ -0,0 +1,369 @@
@@ -2715,7 +2715,7 @@ index 0000000000000..4943c62191909
 +}
 diff --git a/dts/bindings/sensor/maxim,max32664c.yml b/dts/bindings/sensor/maxim,max32664c.yml
 new file mode 100644
-index 0000000000000..3f8c36c77499f
+index 00000000000..3f8c36c7749
 --- /dev/null
 +++ b/dts/bindings/sensor/maxim,max32664c.yml
 @@ -0,0 +1,159 @@
@@ -2880,7 +2880,7 @@ index 0000000000000..3f8c36c77499f
 +      The default corresponds to Table 15 in the HR and SpO2 User guide.
 diff --git a/include/zephyr/drivers/sensor/max32664c.h b/include/zephyr/drivers/sensor/max32664c.h
 new file mode 100644
-index 0000000000000..128f15ead201a
+index 00000000000..128f15ead20
 --- /dev/null
 +++ b/include/zephyr/drivers/sensor/max32664c.h
 @@ -0,0 +1,186 @@
@@ -3072,7 +3072,7 @@ index 0000000000000..128f15ead201a
 +#endif /* ZEPHYR_INCLUDE_DRIVERS_SENSOR_MAX32664C_H_ */
 diff --git a/samples/sensor/max32664c/CMakeLists.txt b/samples/sensor/max32664c/CMakeLists.txt
 new file mode 100644
-index 0000000000000..4992762f91cdf
+index 00000000000..4992762f91c
 --- /dev/null
 +++ b/samples/sensor/max32664c/CMakeLists.txt
 @@ -0,0 +1,7 @@
@@ -3085,7 +3085,7 @@ index 0000000000000..4992762f91cdf
 +target_sources(app PRIVATE src/main.c)
 diff --git a/samples/sensor/max32664c/README.rst b/samples/sensor/max32664c/README.rst
 new file mode 100644
-index 0000000000000..0c25e003f3928
+index 00000000000..0c25e003f39
 --- /dev/null
 +++ b/samples/sensor/max32664c/README.rst
 @@ -0,0 +1,49 @@
@@ -3140,7 +3140,7 @@ index 0000000000000..0c25e003f3928
 +    [00:00:03.600,100] <inf> sensor: MAX32664C: HR Confidence: 98
 diff --git a/samples/sensor/max32664c/boards/nrf54l15dk_nrf54l15_cpuapp.overlay b/samples/sensor/max32664c/boards/nrf54l15dk_nrf54l15_cpuapp.overlay
 new file mode 100644
-index 0000000000000..92d64ae965303
+index 00000000000..92d64ae9653
 --- /dev/null
 +++ b/samples/sensor/max32664c/boards/nrf54l15dk_nrf54l15_cpuapp.overlay
 @@ -0,0 +1,79 @@
@@ -3225,7 +3225,7 @@ index 0000000000000..92d64ae965303
 +};
 diff --git a/samples/sensor/max32664c/prj.conf b/samples/sensor/max32664c/prj.conf
 new file mode 100644
-index 0000000000000..653e8d1b0cf5a
+index 00000000000..653e8d1b0cf
 --- /dev/null
 +++ b/samples/sensor/max32664c/prj.conf
 @@ -0,0 +1,7 @@
@@ -3238,7 +3238,7 @@ index 0000000000000..653e8d1b0cf5a
 +CONFIG_HEAP_MEM_POOL_SIZE=16384
 diff --git a/samples/sensor/max32664c/sample.yaml b/samples/sensor/max32664c/sample.yaml
 new file mode 100644
-index 0000000000000..e515826752305
+index 00000000000..e5158267523
 --- /dev/null
 +++ b/samples/sensor/max32664c/sample.yaml
 @@ -0,0 +1,15 @@
@@ -3259,7 +3259,7 @@ index 0000000000000..e515826752305
 +      - i2c
 diff --git a/samples/sensor/max32664c/src/main.c b/samples/sensor/max32664c/src/main.c
 new file mode 100644
-index 0000000000000..96a32cb7b7a9a
+index 00000000000..96a32cb7b7a
 --- /dev/null
 +++ b/samples/sensor/max32664c/src/main.c
 @@ -0,0 +1,77 @@
@@ -3340,3 +3340,6 @@ index 0000000000000..96a32cb7b7a9a
 +
 +	return 0;
 +}
+-- 
+2.34.1
+
