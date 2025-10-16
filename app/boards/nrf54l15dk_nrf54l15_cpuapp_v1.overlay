@@ -27,6 +27,10 @@
 		label = "Green LED 0";
 };
 
+&led1 {
+	gpios = <&gpio0 0 GPIO_ACTIVE_HIGH>;
+		label = "Green LED 1";
+};
 
 &i2c30 {
 	compatible = "nordic,nrf-twim";
@@ -51,6 +55,10 @@
 		led-current = [3F 3F 3F];
 		use-max86141;
 	};
+};
+
+&spi00 {
+	status = "disabled";
 };
 
 &dppic10 {

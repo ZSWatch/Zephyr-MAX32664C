@@ -23,10 +23,12 @@
 #include <zephyr/bluetooth/services/bas.h>
 #include <zephyr/bluetooth/services/hrs.h>
 
-#ifdef CONFIG_APPLICATION_RUN_FW_UPDATE
-#include "firmware/max32664c_kx122_z_32_9_23.h"
+#ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
+#define FW_VERSION_MAJOR 30
+#define FW_VERSION_MINOR 13
+#define FW_VERSION_PATCH 31
 #include "firmware/MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31.h"
-#endif /* CONFIG_APPLICATION_RUN_FW_UPDATE */
+#endif
 
 #define BLE_CONNECTED               1U
 #define BLE_DISCONNECTED            2U
@@ -35,6 +37,7 @@ static void auth_cancel(struct bt_conn *conn);
 static void hrs_ntf_changed(bool enabled);
 static void connected(struct bt_conn *conn, uint8_t err);
 static void disconnected(struct bt_conn *conn, uint8_t reason);
+static void recycled(void);
 
 static ATOMIC_DEFINE(state, 2U);
 static bool hrf_ntf_enabled;
@@ -63,10 +66,12 @@ struct bt_le_adv_param adv_param = {
 
 static const struct device *const sensor_hub = DEVICE_DT_GET_OR_NULL(DT_ALIAS(sensor));
 static const struct gpio_dt_spec led_en = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+static const struct gpio_dt_spec led_green = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
     .connected = connected,
     .disconnected = disconnected,
+    .recycled = recycled
 };
 
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
@@ -105,6 +110,18 @@ static void disconnected(struct bt_conn *conn, uint8_t reason)
     atomic_set_bit(state, BLE_DISCONNECTED);
 }
 
+static void recycled(void)
+{
+    LOG_INF("Connection recycled");
+    LOG_INF("Starting Legacy Advertising (connectable and scannable)");
+    int err = bt_le_adv_start(&adv_param, ad, ARRAY_SIZE(ad), NULL, 0);
+    if (err) {
+        LOG_ERR("Advertising failed to start! %i", err);
+        return;
+    }
+    LOG_INF("Advertising successfully started");
+}
+
 static void hrs_notify(void)
 {
     struct sensor_value value;
@@ -135,14 +152,23 @@ static void hrs_notify(void)
         }
     } else if ((value.val1 == MAX32664C_OP_MODE_ALGO_AEC_EXT) || (value.val1 == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
         struct sensor_value hr;
+        struct sensor_value rr;
+        struct sensor_value skin_contact;
 
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, &hr);
-        LOG_INF("HR: %u", hr.val1);
-        LOG_INF("Confidence: %u", hr.val2);
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_RESPIRATION_RATE, &rr);
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_SKIN_CONTACT, &skin_contact);
+
+        LOG_INF("=== Extended Mode Data ===");
+        LOG_INF("HR: %u (Confidence: %u)", hr.val1, hr.val2);
+        LOG_INF("Respiration Rate: %u bpm", rr.val1);
+        LOG_INF("Skin Contact: %u", skin_contact.val1);
 
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
         }
+    } else {
+        LOG_WRN("Unknown operation mode: %u", value.val1);
     }
 }
 
@@ -161,16 +187,35 @@ int main(void)
         return 0;
     }
 
+    if (!gpio_is_ready_dt(&led_green)) {
+        return 0;
+    }
+
     if (gpio_pin_configure_dt(&led_en, GPIO_OUTPUT_ACTIVE)) {
+        return 0;
+    }
+
+    if (gpio_pin_configure_dt(&led_green, GPIO_OUTPUT_ACTIVE)) {
         return 0;
     }
 
     gpio_pin_set_dt(&led_en, 1);
 
-#ifdef CONFIG_APPLICATION_RUN_FW_UPDATE
-    max32664c_bl_enter(sensor_hub, MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31, sizeof(MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31));
-    max32664c_bl_leave(sensor_hub);
-#endif /* CONFIG_APPLICATION_RUN_FW_UPDATE */
+#ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
+    uint8_t major, minor, patch;
+    err = max32664c_read_fw_version(sensor_hub, &major, &minor, &patch);
+    if (err || major != FW_VERSION_MAJOR || minor != FW_VERSION_MINOR || patch != FW_VERSION_PATCH) {
+        if (err) {
+            LOG_ERR("Failed to read firmware version");
+        }
+        LOG_DBG("Updating firmware to version %u.%u.%u", FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
+        max32664c_bl_enter(sensor_hub, MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31, sizeof(MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31));
+        max32664c_bl_leave(sensor_hub);
+        return 0;
+    } else {
+        LOG_INF("Firmware up to date: %u.%u.%u", major, minor, patch);
+    }
+#endif /* CONFIG_MAX32664C_USE_FIRMWARE_LOADER */
 
     if (bt_enable(NULL)) {
         LOG_ERR("Bluetooth init failed!");
@@ -189,10 +234,10 @@ int main(void)
     LOG_INF("Advertising successfully started");
 
     //value.val1 = MAX32664C_OP_MODE_RAW;
-    value.val1 = MAX32664C_OP_MODE_ALGO_AGC_EXT;
+    value.val1 = MAX32664C_OP_MODE_ALGO_AEC_EXT;
     value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
     sensor_attr_set(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, SENSOR_ATTR_MAX32664C_OP_MODE, &value);
-
+    int i = 0;
     while (1)
     {
         hrs_notify();
@@ -203,6 +248,10 @@ int main(void)
 
         if (atomic_test_and_clear_bit(state, BLE_CONNECTED)) {
         } else if (atomic_test_and_clear_bit(state, BLE_DISCONNECTED)) {
+        }
+        if (i % 5 == 0) {
+            gpio_pin_toggle_dt(&led_green);
+            i++;
         }
 
         k_msleep(1000);

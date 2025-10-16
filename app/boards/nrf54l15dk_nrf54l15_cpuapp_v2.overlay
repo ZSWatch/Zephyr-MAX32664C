@@ -1,0 +1,64 @@
+&pinctrl {
+	i2c20_default: i2c20_default {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 1, 7)>,
+					<NRF_PSEL(TWIM_SCL, 1, 8)>;
+					bias-pull-up;
+		};
+	};
+
+	i2c20_sleep: i2c20_sleep {
+		group1 {
+			psels = <NRF_PSEL(TWIM_SDA, 1, 7)>,
+					<NRF_PSEL(TWIM_SCL, 1, 8)>;
+					low-power-enable;
+		};
+	};
+};
+
+/ {
+	aliases {
+		sensor = &biometric_hub;
+	};
+};
+
+&led0 {
+	gpios = <&gpio0 1 GPIO_ACTIVE_HIGH>;
+		label = "Green LED 0";
+};
+
+&led1 {
+	gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>;
+		label = "Green LED 1";
+};
+
+&i2c30 {
+	status = "disabled";
+};
+
+
+&i2c20 {
+	compatible = "nordic,nrf-twim";
+	status = "okay";
+	clock-frequency = <I2C_BITRATE_FAST>;
+
+	// Flash buffer size is needed for the I2C bootloader to flash the firmware
+	zephyr,flash-buf-max-size = <8250>;
+
+	pinctrl-0 = <&i2c20_default>;
+	pinctrl-1 = <&i2c20_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	biometric_hub: max32664c@55 {
+		compatible = "maxim,max32664c";
+		reg = <0x55>;
+		status = "okay";
+		reset-gpios = <&gpio2 0 GPIO_ACTIVE_HIGH>;
+		mfio-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
+		hr-config = [00 11];
+		spo2-config = [10 20];
+		led-current = [3F 3F 3F];
+		use-max86141;
+	};
+};
+
