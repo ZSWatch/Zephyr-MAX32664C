@@ -38,6 +38,7 @@ static void hrs_ntf_changed(bool enabled);
 static void connected(struct bt_conn *conn, uint8_t err);
 static void disconnected(struct bt_conn *conn, uint8_t reason);
 static void recycled(void);
+static int mtu_exchange(struct bt_conn *conn);
 
 static ATOMIC_DEFINE(state, 2U);
 static bool hrf_ntf_enabled;
@@ -98,7 +99,7 @@ static void connected(struct bt_conn *conn, uint8_t err)
         LOG_ERR("Connection failed, err 0x%02x %s", err, bt_hci_err_to_str(err));
     } else {
         LOG_INF("Connected");
-
+        mtu_exchange(conn);
         atomic_set_bit(state, BLE_CONNECTED);
     }
 }
@@ -170,6 +171,33 @@ static void hrs_notify(void)
     } else {
         LOG_WRN("Unknown operation mode: %u", value.val1);
     }
+}
+
+static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err,
+			    struct bt_gatt_exchange_params *params)
+{
+	printk("%s: MTU exchange %s (%u)\n", __func__,
+	       err == 0U ? "successful" : "failed",
+	       bt_gatt_get_mtu(conn));
+}
+
+static struct bt_gatt_exchange_params mtu_exchange_params = {
+	.func = mtu_exchange_cb
+};
+
+static int mtu_exchange(struct bt_conn *conn)
+{
+	int err;
+
+	printk("%s: Current MTU = %u\n", __func__, bt_gatt_get_mtu(conn));
+
+	printk("%s: Exchange MTU...\n", __func__);
+	err = bt_gatt_exchange_mtu(conn, &mtu_exchange_params);
+	if (err) {
+		printk("%s: MTU exchange failed (err %d)", __func__, err);
+	}
+
+	return err;
 }
 
 int main(void)
