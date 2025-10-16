@@ -160,10 +160,7 @@ static void hrs_notify(void)
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_RESPIRATION_RATE, &rr);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_SKIN_CONTACT, &skin_contact);
 
-        LOG_INF("=== Extended Mode Data ===");
-        LOG_INF("HR: %u (Confidence: %u)", hr.val1, hr.val2);
-        LOG_INF("Respiration Rate: %u bpm", rr.val1);
-        LOG_INF("Skin Contact: %u", skin_contact.val1);
+        LOG_PRINTK("HR: %u (Conf: %u) RR: %u bpm SC: %u\n", hr.val1, hr.val2, rr.val1, skin_contact.val1);
 
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
