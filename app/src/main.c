@@ -200,6 +200,7 @@ int main(void)
     }
 
     gpio_pin_set_dt(&led_en, 1);
+    gpio_pin_set_dt(&led_green, 0);
 
 #ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
     uint8_t major, minor, patch;
@@ -251,8 +252,10 @@ int main(void)
         }
         if (i % 5 == 0) {
             gpio_pin_toggle_dt(&led_green);
-            i++;
+            k_msleep(100);
+            gpio_pin_toggle_dt(&led_green);
         }
+        i++;
 
         k_msleep(1000);
     }
