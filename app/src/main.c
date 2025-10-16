@@ -23,6 +23,8 @@
 #include <zephyr/bluetooth/services/bas.h>
 #include <zephyr/bluetooth/services/hrs.h>
 
+#include <zephyr/settings/settings.h>
+
 #ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
 #define FW_VERSION_MAJOR 30
 #define FW_VERSION_MINOR 13
@@ -247,6 +249,8 @@ int main(void)
         LOG_ERR("Bluetooth init failed!");
         return 0;
     }
+
+    settings_load();
 
     bt_conn_auth_cb_register(&auth_cb_display);
     bt_hrs_cb_register(&hrs_cb);
