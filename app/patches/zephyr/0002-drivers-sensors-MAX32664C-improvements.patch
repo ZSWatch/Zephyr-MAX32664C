@@ -1,4 +1,4 @@
-From 69ba7dd61ad71139d708ff8fda22faa2e794649b Mon Sep 17 00:00:00 2001
+From 8d095f43a87bf47313a361bbbf7b8e77709f3acc Mon Sep 17 00:00:00 2001
 From: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
 Date: Thu, 16 Oct 2025 15:02:57 +0200
 Subject: [PATCH 2/2] drivers: sensors: MAX32664C improvements
@@ -6,16 +6,17 @@ Subject: [PATCH 2/2] drivers: sensors: MAX32664C improvements
 - Add function to read the firmware version
 - Fix broken SCD sensor reading
 - Add SCD mode to worker
+- Add activity class to sensor readings
 
 Signed-off-by: Daniel Kampert <DanielKampert@kampis-elektroecke.de>
 ---
- drivers/sensor/adi/max32664c/max32664c.c      | 51 ++++++++++++++++---
- drivers/sensor/adi/max32664c/max32664c_bl.c   |  8 ++-
- .../sensor/adi/max32664c/max32664c_worker.c   |  3 ++
- 3 files changed, 50 insertions(+), 12 deletions(-)
+ drivers/sensor/adi/max32664c/max32664c.c      | 71 +++++++++++++++++--
+ drivers/sensor/adi/max32664c/max32664c_bl.c   |  8 +--
+ .../sensor/adi/max32664c/max32664c_worker.c   |  3 +
+ 3 files changed, 70 insertions(+), 12 deletions(-)
 
 diff --git a/drivers/sensor/adi/max32664c/max32664c.c b/drivers/sensor/adi/max32664c/max32664c.c
-index 99d89cc655b..4efdb426029 100644
+index 99d89cc655b..807590ed5fa 100644
 --- a/drivers/sensor/adi/max32664c/max32664c.c
 +++ b/drivers/sensor/adi/max32664c/max32664c.c
 @@ -51,6 +51,26 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx
@@ -45,7 +46,40 @@ index 99d89cc655b..4efdb426029 100644
  /** @brief      Check the accelerometer and AFE WHOAMI registers.
   *              This function is called during device initialization.
   *  @param dev  Pointer to device
-@@ -711,7 +731,29 @@ static int max32664c_channel_get(const struct device *dev, enum sensor_channel c
+@@ -658,26 +678,32 @@ static int max32664c_channel_get(const struct device *dev, enum sensor_channel c
+ 	switch ((int)chan) {
+ 	case SENSOR_CHAN_ACCEL_X: {
+ 		val->val1 = data->raw.acc.x;
++		val->val2 = 0;
+ 		break;
+ 	}
+ 	case SENSOR_CHAN_ACCEL_Y: {
+ 		val->val1 = data->raw.acc.y;
++		val->val2 = 0;
+ 		break;
+ 	}
+ 	case SENSOR_CHAN_ACCEL_Z: {
+ 		val->val1 = data->raw.acc.z;
++		val->val2 = 0;
+ 		break;
+ 	}
+ 	case SENSOR_CHAN_GREEN: {
+ 		val->val1 = data->raw.PPG1;
++		val->val2 = 0;
+ 		break;
+ 	}
+ 	case SENSOR_CHAN_IR: {
+ 		val->val1 = data->raw.PPG2;
++		val->val2 = 0;
+ 		break;
+ 	}
+ 	case SENSOR_CHAN_RED: {
+ 		val->val1 = data->raw.PPG3;
++		val->val2 = 0;
+ 		break;
+ 	}
+ 	case SENSOR_CHAN_MAX32664C_HEARTRATE: {
+@@ -711,7 +737,43 @@ static int max32664c_channel_get(const struct device *dev, enum sensor_channel c
  		break;
  	}
  	case SENSOR_CHAN_MAX32664C_SKIN_CONTACT: {
@@ -53,18 +87,21 @@ index 99d89cc655b..4efdb426029 100644
 +		switch (data->op_mode) {
 +			case MAX32664C_OP_MODE_SCD: {
 +				val->val1 = data->scd.scd_classifier;
++				val->val2 = 0;
 +				break;
 +			}
 +#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
 +			case MAX32664C_OP_MODE_ALGO_AEC_EXT:
 +			case MAX32664C_OP_MODE_ALGO_AGC_EXT: {
 +				val->val1 = data->ext.scd_state;
++				val->val2 = 0;
 +				break;
 +			}
 +#else
 +			case MAX32664C_OP_MODE_ALGO_AEC:
 +			case MAX32664C_OP_MODE_ALGO_AGC: {
 +				val->val1 = data->report.scd_state;
++				val->val2 = 0;
 +				break;
 +			}
 +#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
@@ -73,10 +110,21 @@ index 99d89cc655b..4efdb426029 100644
 +			}
 +		}
 +
++		break;
++	}
++	case SENSOR_CHAN_MAX32664C_ACTIVITY: {
++#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
++		val->val1 = data->ext.activity_class;
++		val->val2 = 0;
++#else
++		val->val1 = data->report.activity_class;
++		val->val2 = 0;
++#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
++
  		break;
  	}
  	default: {
-@@ -984,15 +1026,10 @@ static int max32664c_init(const struct device *dev)
+@@ -984,15 +1046,10 @@ static int max32664c_init(const struct device *dev)
  		return -EINVAL;
  	}
  

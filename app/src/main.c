@@ -159,12 +159,14 @@ static void hrs_notify(void)
         struct sensor_value hr;
         struct sensor_value rr;
         struct sensor_value skin_contact;
+        struct sensor_value activity;
 
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, &hr);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_RESPIRATION_RATE, &rr);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_SKIN_CONTACT, &skin_contact);
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_ACTIVITY, &activity);
 
-        LOG_PRINTK("HR: %u (Conf: %u) RR: %u bpm SC: %u\n", hr.val1, hr.val2, rr.val1, skin_contact.val1);
+        LOG_PRINTK("HR: %u (Conf: %u) RR: %u bpm SC: %u AC: %u\n", hr.val1, hr.val2, rr.val1, skin_contact.val1, activity.val1);
 
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
@@ -266,6 +268,7 @@ int main(void)
         LOG_DBG("Updating firmware to version %u.%u.%u", FW_VERSION_MAJOR, FW_VERSION_MINOR, FW_VERSION_PATCH);
         max32664c_bl_enter(sensor_hub, MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31, sizeof(MAX32664C_HSP2_WHRM_AEC_SCD_WSPO2_C_30_13_31));
         max32664c_bl_leave(sensor_hub);
+
         return 0;
     } else {
         LOG_INF("Firmware up to date: %u.%u.%u", major, minor, patch);
