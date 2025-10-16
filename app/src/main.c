@@ -70,6 +70,8 @@ struct bt_le_adv_param adv_param = {
 static const struct device *const sensor_hub = DEVICE_DT_GET_OR_NULL(DT_ALIAS(sensor));
 static const struct gpio_dt_spec led_en = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 static const struct gpio_dt_spec led_green = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
+static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
+static bool button_last_state = false;
 
 BT_CONN_CB_DEFINE(conn_callbacks) = {
     .connected = connected,
@@ -199,6 +201,17 @@ static int mtu_exchange(struct bt_conn *conn)
 	return err;
 }
 
+static void check_button(void)
+{
+    bool current_state = gpio_pin_get_dt(&button) == 0;
+
+    if (current_state && !button_last_state) {
+        LOG_INF("Button pressed!");
+    }
+
+    button_last_state = current_state;
+}
+
 int main(void)
 {
     int32_t err;
@@ -228,6 +241,20 @@ int main(void)
 
     gpio_pin_set_dt(&led_en, 1);
     gpio_pin_set_dt(&led_green, 0);
+
+    // Configure button
+    if (!gpio_is_ready_dt(&button)) {
+        LOG_ERR("Button device not ready!");
+        return 0;
+    }
+
+    err = gpio_pin_configure_dt(&button, GPIO_INPUT);
+    if (err) {
+        LOG_ERR("Failed to configure button pin: %d", err);
+        return 0;
+    }
+
+    LOG_INF("Button configured on P2.03 (polling mode)");
 
 #ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
     uint8_t major, minor, patch;
@@ -270,7 +297,13 @@ int main(void)
     int i = 0;
     while (1)
     {
-        hrs_notify();
+        // Poll button every 100ms
+        check_button();
+
+        // Send heart rate notification every second (every 10 iterations)
+        if (i % 10 == 0) {
+            hrs_notify();
+        }
 
         if (atomic_test_bit(state, BLE_CONNECTED)) {
             LOG_INF("Connected!");
@@ -279,14 +312,16 @@ int main(void)
         if (atomic_test_and_clear_bit(state, BLE_CONNECTED)) {
         } else if (atomic_test_and_clear_bit(state, BLE_DISCONNECTED)) {
         }
-        if (i % 5 == 0) {
+
+        // Blink LED every 5 seconds (every 50 iterations)
+        if (i % 50 == 0) {
             gpio_pin_toggle_dt(&led_green);
             k_msleep(100);
             gpio_pin_toggle_dt(&led_green);
         }
         i++;
 
-        k_msleep(1000);
+        k_msleep(100);
     }
 
     return 0;
