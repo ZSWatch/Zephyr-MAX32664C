@@ -294,6 +294,17 @@ int main(void)
 
     settings_load();
 
+    if (gpio_pin_get_dt(&button) == 1) {
+        LOG_WRN("Button pressed during startup - clearing all bonded devices!");
+
+        err = bt_unpair(BT_ID_DEFAULT, NULL);
+        if (err) {
+            LOG_ERR("Failed to clear bonded devices: %d", err);
+        } else {
+            LOG_INF("All bonded devices cleared successfully!");
+        }
+    }
+
     bt_conn_auth_cb_register(&auth_cb_display);
     bt_hrs_cb_register(&hrs_cb);
 
