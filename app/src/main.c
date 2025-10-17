@@ -160,13 +160,16 @@ static void hrs_notify(void)
         struct sensor_value rr;
         struct sensor_value skin_contact;
         struct sensor_value activity;
+        struct sensor_value blood_oxygen;
 
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, &hr);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_RESPIRATION_RATE, &rr);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_SKIN_CONTACT, &skin_contact);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_ACTIVITY, &activity);
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION, &blood_oxygen);
 
-        LOG_PRINTK("HR: %u (Conf: %u) RR: %u bpm SC: %u AC: %u\n", hr.val1, hr.val2, rr.val1, skin_contact.val1, activity.val1);
+        LOG_PRINTK("HR: %u (Conf: %u) RR: %u bpm SC: %u AC: %u Sp02: %u (Conf: %u)\n",
+            hr.val1, hr.val2, rr.val1, skin_contact.val1, activity.val1, blood_oxygen.val1, blood_oxygen.val2);
 
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
