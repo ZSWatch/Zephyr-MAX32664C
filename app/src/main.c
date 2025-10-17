@@ -137,11 +137,20 @@ static void hrs_notify(void)
         struct sensor_value x;
         struct sensor_value y;
         struct sensor_value z;
+        struct sensor_value green;
+        struct sensor_value ir;
+        struct sensor_value red;
 
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_GREEN, &green);
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_IR, &ir);
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_RED, &red);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_X, &x);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Y, &y);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Z, &z);
 
+        LOG_DBG("\tGreen: %i", green.val1);
+        LOG_DBG("\tIR: %i", ir.val1);
+        LOG_DBG("\tRed: %i", red.val1);
         LOG_INF("\tx: %i", x.val1);
         LOG_INF("\ty: %i", y.val1);
         LOG_INF("\tz: %i", z.val1);
@@ -168,17 +177,20 @@ static void hrs_notify(void)
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_ACTIVITY, &activity);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION, &blood_oxygen);
 
+        LOG_INF("HR: %u bpm (Confidence: %u)", hr.val1, hr.val2);
+        LOG_INF("SpO2: %u bpm (Confidence: %u)", blood_oxygen.val1, blood_oxygen.val2);
+
         // Output format
         //  HR,<value>,bpm;Conf,<value>;,RR,<value>;ms,SC,<value>;,Activity,<value>;,SpO2,<value>;%,Conf,<value>;,
-        LOG_PRINTK("HR,%u,bpm;"
-                   "HR_Conf,%u,;"
-                   "RR,%u,ms;"
-                   "RR_Conf,%u,;"
-                   "SC,%u,;"
-                   "Activity,%u,;"
-                   "SpO2,%u,%%;"
-                   "SpO2_Conf,%u,\n",
-            hr.val1, hr.val2, rr.val1, rr.val2, skin_contact.val1, activity.val1, blood_oxygen.val1, blood_oxygen.val2);
+        //LOG_PRINTK("HR,%u,bpm;"
+        //           "HR_Conf,%u,;"
+        //           "RR,%u,ms;"
+        //           "RR_Conf,%u,;"
+        //           "SC,%u,;"
+        //           "Activity,%u,;"
+        //           "SpO2,%u,%%;"
+        //           "SpO2_Conf,%u,\n",
+        //    hr.val1, hr.val2, rr.val1, rr.val2, skin_contact.val1, activity.val1, blood_oxygen.val1, blood_oxygen.val2);
 
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
@@ -320,6 +332,11 @@ int main(void)
     value.val1 = MAX32664C_OP_MODE_ALGO_AEC_EXT;
     value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
     sensor_attr_set(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, SENSOR_ATTR_MAX32664C_OP_MODE, &value);
+    while(1)
+    {
+        k_msleep(100);
+    }
+
     int i = 0;
     while (1)
     {
