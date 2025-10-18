@@ -13,7 +13,6 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/drivers/sensor.h>
-#include <zephyr/drivers/sensor/max32664c.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/hci.h>
@@ -24,6 +23,8 @@
 #include <zephyr/bluetooth/services/hrs.h>
 
 #include <zephyr/settings/settings.h>
+
+#include "sensor/max32664c.h"
 
 #ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
 #define FW_VERSION_MAJOR 30
@@ -156,10 +157,13 @@ static void hrs_notify(void)
         LOG_INF("\tz: %i", z.val1);
     } else if ((value.val1 == MAX32664C_OP_MODE_ALGO_AEC) || (value.val1 == MAX32664C_OP_MODE_ALGO_AGC)) {
         struct sensor_value hr;
+        struct sensor_value blood_oxygen;
 
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, &hr);
-        LOG_INF("HR: %u", hr.val1);
-        LOG_INF("Confidence: %u", hr.val2);
+        sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION, &blood_oxygen);
+
+        LOG_INF("HR: %u bpm (Confidence: %u)", hr.val1, hr.val2);
+        LOG_INF("SpO2: %u bpm (Confidence: %u)", blood_oxygen.val1, blood_oxygen.val2);
 
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
@@ -329,13 +333,13 @@ int main(void)
     LOG_INF("Advertising successfully started");
 
     //value.val1 = MAX32664C_OP_MODE_RAW;
+#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
     value.val1 = MAX32664C_OP_MODE_ALGO_AEC_EXT;
-    value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
+#else
+    value.val1 = MAX32664C_OP_MODE_ALGO_AEC;
+#endif
+    value.val2 = MAX32664C_ALGO_MODE_CONT_HR_CONT_SPO2;
     sensor_attr_set(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, SENSOR_ATTR_MAX32664C_OP_MODE, &value);
-    while(1)
-    {
-        k_msleep(100);
-    }
 
     int i = 0;
     while (1)
