@@ -46,27 +46,20 @@ struct max32664c_led_current_t {
 	uint16_t adj_val;
 } __packed;
 
+/** @brief Common measurement result structure.
+ */
+struct max32664c_meas_t {
+	uint16_t value;
+	uint8_t confidence;
+} __packed;
+
 /** @brief SpO2 measurement result structure.
  */
 struct max32664c_spo2_meas_t {
-	uint8_t confidence;
-	uint16_t value;
+	struct max32664c_meas_t meas;
 	uint8_t complete;
-	uint8_t low_signal_quality;
-	uint8_t motion;
-	uint8_t low_pi;
-	uint8_t unreliable_r;
-	uint8_t state;
-} __packed;
-
-/** @brief Extended SpO2 measurement result structure.
- */
-struct max32664c_ext_spo2_meas_t {
-	uint8_t confidence;
-	uint16_t value;
-	uint8_t valid_percent;
-	uint8_t low_signal_flag;
-	uint8_t motion_flag;
+	uint8_t low_signal_quality_flag;
+	uint8_t excessive_motion_flag;
 	uint8_t low_pi_flag;
 	uint8_t unreliable_r_flag;
 	uint8_t state;
@@ -94,10 +87,8 @@ struct max32664c_scd_report_t {
  */
 struct max32664c_report_t {
 	uint8_t op_mode;
-	uint16_t hr;
-	uint8_t hr_confidence;
-	uint16_t rr;
-	uint8_t rr_confidence;
+	struct max32664c_meas_t hr_meas;
+	struct max32664c_meas_t rr_meas;
 	uint8_t activity_class;
 	uint16_t r;
 	struct max32664c_spo2_meas_t spo2_meas;
@@ -108,10 +99,8 @@ struct max32664c_report_t {
  */
 struct max32664c_ext_report_t {
 	uint8_t op_mode;
-	uint16_t hr;
-	uint8_t hr_confidence;
-	uint16_t rr;
-	uint8_t rr_confidence;
+	struct max32664c_meas_t hr_meas;
+	struct max32664c_meas_t rr_meas;
 	uint8_t activity_class;
 
 	uint32_t total_walk_steps;
@@ -136,7 +125,7 @@ struct max32664c_ext_report_t {
 	uint8_t scd_state;
 
 	uint16_t r_value;
-	struct max32664c_ext_spo2_meas_t spo2_meas;
+	struct max32664c_spo2_meas_t spo2_meas;
 
 	uint8_t ibi_offset;
 	uint8_t unreliable_orientation_flag;

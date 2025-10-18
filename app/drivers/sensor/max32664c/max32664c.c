@@ -318,8 +318,6 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
 
 	LOG_DBG("Algorithm mode: %u", algo_mode);
 
-	LOG_DBG("Algorithm mode: %u", algo_mode);
-
 	/* Set the algorithm mode */
 	tx[0] = 0x50;
 	tx[1] = 0x07;
@@ -716,31 +714,43 @@ static int max32664c_channel_get(const struct device *dev, enum sensor_channel c
 	}
 	case SENSOR_CHAN_MAX32664C_HEARTRATE: {
 #ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
-		val->val1 = data->ext.hr;
-		val->val2 = data->ext.hr_confidence;
+		val->val1 = data->ext.hr_meas.value;
+		val->val2 = data->ext.hr_meas.confidence;
 #else
-		val->val1 = data->report.hr;
-		val->val2 = data->report.hr_confidence;
+		val->val1 = data->report.hr_meas.value;
+		val->val2 = data->report.hr_meas.confidence;
 #endif
 		break;
 	}
 	case SENSOR_CHAN_MAX32664C_RESPIRATION_RATE: {
 #ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
-		val->val1 = data->ext.rr;
-		val->val2 = data->ext.rr_confidence;
+		val->val1 = data->ext.rr_meas.value;
+		val->val2 = data->ext.rr_meas.confidence;
 #else
-		val->val1 = data->report.rr;
-		val->val2 = data->report.rr_confidence;
+		val->val1 = data->report.rr_meas.value;
+		val->val2 = data->report.rr_meas.confidence;
 #endif
 		break;
 	}
 	case SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION: {
 #ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
-		val->val1 = data->ext.spo2_meas.value;
-		val->val2 = data->ext.spo2_meas.confidence;
+		val->val1 = data->ext.spo2_meas.meas.value;
+		val->val2 = data->ext.spo2_meas.meas.confidence |
+					(data->ext.spo2_meas.complete << 8) |
+					(data->ext.spo2_meas.state << 16) |
+					(data->ext.spo2_meas.unreliable_r_flag << 18) |
+					(data->ext.spo2_meas.low_pi_flag << 19) |
+					(data->ext.spo2_meas.excessive_motion_flag << 20) |
+					(data->ext.spo2_meas.low_signal_quality_flag << 21);
 #else
-		val->val1 = data->report.spo2_meas.value;
-		val->val2 = data->report.spo2_meas.confidence;
+		val->val1 = data->report.spo2_meas.meas.value;
+		val->val2 = data->report.spo2_meas.meas.confidence |
+					(data->report.spo2_meas.complete << 8) |
+					(data->report.spo2_meas.state << 16) |
+					(data->report.spo2_meas.unreliable_r_flag << 18) |
+					(data->report.spo2_meas.low_pi_flag << 19) |
+					(data->report.spo2_meas.excessive_motion_flag << 20) |
+					(data->report.spo2_meas.low_signal_quality_flag << 21);
 #endif
 		break;
 	}
@@ -997,7 +1007,7 @@ static int max32664c_attr_get(const struct device *dev, enum sensor_channel chan
 		}
 		break;
 	}
-	case SENSOR_ATTR_MAX32664C_STATUS: {
+	case SENSOR_CHAN_MAX32664C_STATUS: {
 		val->val1 = data->device_status;
 		val->val2 = 0;
 		break;

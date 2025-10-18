@@ -115,14 +115,14 @@ static void max32664c_parse_and_push_ext_report(const struct device *dev)
 	struct max32664c_ext_report_t report;
 
 	report.op_mode = data->max32664_i2c_buffer[25];
-	report.hr =
+	report.hr_meas.value =
 		(((uint16_t)(data->max32664_i2c_buffer[26]) << 8) | data->max32664_i2c_buffer[27]) /
 		10;
-	report.hr_confidence = data->max32664_i2c_buffer[28];
-	report.rr =
+	report.hr_meas.confidence = data->max32664_i2c_buffer[28];
+	report.rr_meas.value =
 		(((uint16_t)(data->max32664_i2c_buffer[29]) << 8) | data->max32664_i2c_buffer[30]) /
 		10;
-	report.rr_confidence = data->max32664_i2c_buffer[31];
+	report.rr_meas.confidence = data->max32664_i2c_buffer[31];
 	report.activity_class = data->max32664_i2c_buffer[32];
 	report.total_walk_steps = data->max32664_i2c_buffer[33] |
 				   ((uint32_t)(data->max32664_i2c_buffer[34]) << 8) |
@@ -163,13 +163,13 @@ static void max32664c_parse_and_push_ext_report(const struct device *dev)
 	report.r_value =
 		(((uint16_t)(data->max32664_i2c_buffer[66]) << 8) | data->max32664_i2c_buffer[67]) /
 		1000;
-	report.spo2_meas.confidence = data->max32664_i2c_buffer[68];
-	report.spo2_meas.value =
+	report.spo2_meas.meas.confidence = data->max32664_i2c_buffer[68];
+	report.spo2_meas.meas.value =
 		(((uint16_t)(data->max32664_i2c_buffer[69]) << 8) | data->max32664_i2c_buffer[70]) /
 		10;
-	report.spo2_meas.valid_percent = data->max32664_i2c_buffer[71];
+	report.spo2_meas.complete = data->max32664_i2c_buffer[71];
 	report.spo2_meas.low_signal_flag = data->max32664_i2c_buffer[72];
-	report.spo2_meas.motion_flag = data->max32664_i2c_buffer[73];
+	report.spo2_meas.excessive_motion_flag = data->max32664_i2c_buffer[73];
 	report.spo2_meas.low_pi_flag = data->max32664_i2c_buffer[74];
 	report.spo2_meas.unreliable_r_flag = data->max32664_i2c_buffer[75];
 	report.spo2_meas.state = data->max32664_i2c_buffer[76];
@@ -178,11 +178,8 @@ static void max32664c_parse_and_push_ext_report(const struct device *dev)
 	report.reserved[0] = data->max32664_i2c_buffer[79];
 	report.reserved[1] = data->max32664_i2c_buffer[80];
 
-	data->device_status |= ((report.spo2_meas.motion_flag & 0x01) << 5) |
-						   ((report.unreliable_orientation_flag & 0x01) << 4) |
-	                       ((report.sampling_rate_adj_flag & 0x01) << 3) |
-						   ((report.integration_time_adj_flag & 0x01) << 2) |
-						   (report.spo2_meas.state << 0);
+	data->device_status |= report.sampling_rate_adj_flag & 0x01 |
+						   ((report.integration_time_adj_flag & 0x01) << 1);
 
 	max32664c_push_to_queue(&data->ext_report_queue, &report);
 }
@@ -196,32 +193,29 @@ static void max32664c_parse_and_push_report(const struct device *dev)
 	struct max32664c_report_t report;
 
 	report.op_mode = data->max32664_i2c_buffer[25];
-	report.hr =
+	report.hr_meas.value =
 		(((uint16_t)(data->max32664_i2c_buffer[26]) << 8) | data->max32664_i2c_buffer[27]) /
 		10;
-	report.hr_confidence = data->max32664_i2c_buffer[28];
-	report.rr =
+	report.hr_meas.confidence = data->max32664_i2c_buffer[28];
+	report.rr_meas.value =
 		(((uint16_t)(data->max32664_i2c_buffer[29]) << 8) | data->max32664_i2c_buffer[30]) /
 		10;
-	report.rr_confidence = data->max32664_i2c_buffer[31];
+	report.rr_meas.confidence = data->max32664_i2c_buffer[31];
 	report.activity_class = data->max32664_i2c_buffer[32];
 	report.r =
 		(((uint16_t)(data->max32664_i2c_buffer[33]) << 8) | data->max32664_i2c_buffer[34]) /
 		1000;
-	report.spo2_meas.confidence = data->max32664_i2c_buffer[35];
-	report.spo2_meas.value =
+	report.spo2_meas.meas.confidence = data->max32664_i2c_buffer[35];
+	report.spo2_meas.meas.value =
 		(((uint16_t)(data->max32664_i2c_buffer[36]) << 8) | data->max32664_i2c_buffer[37]) /
 		10;
 	report.spo2_meas.complete = data->max32664_i2c_buffer[38];
-	report.spo2_meas.low_signal_quality = data->max32664_i2c_buffer[39];
-	report.spo2_meas.motion = data->max32664_i2c_buffer[40];
-	report.spo2_meas.low_pi = data->max32664_i2c_buffer[41];
-	report.spo2_meas.unreliable_r = data->max32664_i2c_buffer[42];
+	report.spo2_meas.low_signal_quality_flag = data->max32664_i2c_buffer[39];
+	report.spo2_meas.excessive_motion_flag = data->max32664_i2c_buffer[40];
+	report.spo2_meas.low_pi_flag = data->max32664_i2c_buffer[41];
+	report.spo2_meas.unreliable_r_flag = data->max32664_i2c_buffer[42];
 	report.spo2_meas.state = data->max32664_i2c_buffer[43];
 	report.scd_state = data->max32664_i2c_buffer[44];
-
-	data->device_status |= ((report.spo2_meas.motion & 0x01) << 5) |
-						   (report.spo2_meas.state << 0);
 
 	max32664c_push_to_queue(&data->report_queue, &report);
 }

@@ -23,11 +23,28 @@
 
 /* MAX32664C specific channels */
 enum sensor_channel_max32664c {
-	/** Heart rate value (bpm) */
+	/** Heart rate measurement result */
+	/*    Val 1: Heart rate value (bpm) */
+	/*    Val 2: Confidence (%) */
 	SENSOR_CHAN_MAX32664C_HEARTRATE = SENSOR_CHAN_PRIV_START,
-	/** SpO2 value (%) */
+	/** Blood oxygen saturation measurement result */
+	/*    Val 1: Blood oxygen saturation (%) */
+	/*    Val 2: */
+	/*       Bit 7-0: Confidence (%) */
+	/*       Bit 15-8: Calculation progress (%) */
+	/*       Bit 17-16: SpO2 state */
+	/*           0: LED adjustment */
+	/*           1: Computation */
+	/*           2: Success */
+	/*           3: Timeout */
+	/*       Bit 18: Unreliable R flag */
+	/*       Bit 19: Low PI flag */
+	/*       Bit 20: Motion flag */
+	/*       Bit 21: Low signal quality flag */
 	SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION,
-	/** Respiration rate (breaths per minute) */
+	/** Respiration rate */
+	/*    Val 1: Respiration rate value (breaths per minute) */
+	/*    Val 2: Confidence (%) */
 	SENSOR_CHAN_MAX32664C_RESPIRATION_RATE,
 	/** Skin contact (1 -> Skin contact, 0, no contact) */
 	SENSOR_CHAN_MAX32664C_SKIN_CONTACT,
@@ -36,12 +53,9 @@ enum sensor_channel_max32664c {
 	/** Step counter */
 	SENSOR_CHAN_MAX32664C_STEP_COUNTER,
 	/** Additional sensor status informations */
-	/*     Bit 1-0: SpO2 measurement state (Normal / Extended) */
-	/*     Bit 2: Integration time adjustment required flag (Extended) */
-	/*     Bit 3: Sampling rate adjustment required flag (Extended) */
-	/*     Bit 4: Unreliable orientation flag (Extended) */
-	/*     Bit 5: Excessive motion flag (Normal / Extended) */
-	SENSOR_ATTR_MAX32664C_STATUS
+	/*     Bit 0: Integration time adjustment required flag (Extended) */
+	/*     Bit 1: Sampling rate adjustment required flag (Extended) */
+	SENSOR_CHAN_MAX32664C_STATUS
 };
 
 /* MAX32664C specific attributes */
@@ -156,6 +170,83 @@ struct max32664c_acc_data_t {
 	int16_t y;
 	int16_t z;
 } __packed;
+
+/**
+ * @brief Helper function for converting struct sensor_value to MAX32664C SpO2 confidence.
+ *
+ * @param val A pointer to a sensor_value struct.
+ * @return The converted value.
+ */
+static inline uint8_t sensor_max32664c_value_to_confidence(const struct sensor_value *val)
+{
+	return (uint8_t)(val->val2 & 0xFF);
+}
+
+/**
+ * @brief Helper function for converting struct sensor_value to MAX32664C SpO2 calculation progress.
+ *
+ * @param val A pointer to a sensor_value struct.
+ * @return The converted value.
+ */
+static inline uint8_t sensor_max32664c_value_to_calculation_progress(const struct sensor_value *val)
+{
+	return (uint8_t)((val->val2 >> 8) & 0xFF);
+}
+
+/**
+ * @brief Helper function for converting struct sensor_value to MAX32664C SpO2 state.
+ *
+ * @param val A pointer to a sensor_value struct.
+ * @return The converted value.
+ */
+static inline uint8_t sensor_max32664c_value_to_state(const struct sensor_value *val)
+{
+	return (uint8_t)((val->val2 >> 16) & 0x03);
+}
+
+/**
+ * @brief Helper function for converting struct sensor_value to MAX32664C unreliable R flag.
+ *
+ * @param val A pointer to a sensor_value struct.
+ * @return The converted value.
+ */
+static inline uint8_t sensor_max32664c_value_to_unreliable_r_flag(const struct sensor_value *val)
+{
+	return (uint8_t)((val->val2 >> 18) & 0x01);
+}
+
+/**
+ * @brief Helper function for converting struct sensor_value to MAX32664C low PI flag.
+ *
+ * @param val A pointer to a sensor_value struct.
+ * @return The converted value.
+ */
+static inline uint8_t sensor_max32664c_value_to_low_pi_flag(const struct sensor_value *val)
+{
+	return (uint8_t)((val->val2 >> 19) & 0x01);
+}
+
+/**
+ * @brief Helper function for converting struct sensor_value to MAX32664C motion flag.
+ *
+ * @param val A pointer to a sensor_value struct.
+ * @return The converted value.
+ */
+static inline uint8_t sensor_max32664c_value_to_motion_flag(const struct sensor_value *val)
+{
+	return (uint8_t)((val->val2 >> 20) & 0x01);
+}
+
+/**
+ * @brief Helper function for converting struct sensor_value to MAX32664C log signal quality flag.
+ *
+ * @param val A pointer to a sensor_value struct.
+ * @return The converted value.
+ */
+static inline uint8_t sensor_max32664c_value_to_log_signal_quality_flag(const struct sensor_value *val)
+{
+	return (uint8_t)((val->val2 >> 21) & 0x01);
+}
 
 /** @brief          Read the firmware version from the sensor hub.
  *  @param dev      Pointer to device
