@@ -26,6 +26,8 @@
 
 #include "sensor/max32664c.h"
 
+#define LOG_DATA_FOR_PLOTTING 0
+
 #ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
 #define FW_VERSION_MAJOR 30
 #define FW_VERSION_MINOR 13
@@ -134,7 +136,7 @@ static void hrs_notify(void)
 
     sensor_sample_fetch(sensor_hub);
     sensor_attr_get(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, SENSOR_ATTR_MAX32664C_OP_MODE, &value);
-    if (value.val1 == MAX32664C_OP_MODE_RAW) {
+    if ((value.val1 == MAX32664C_OP_MODE_RAW) || (value.val1 == MAX32664C_OP_MODE_ALGO_AEC_EXT) || (value.val1 == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
         struct sensor_value x;
         struct sensor_value y;
         struct sensor_value z;
@@ -149,13 +151,27 @@ static void hrs_notify(void)
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Y, &y);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Z, &z);
 
-        LOG_DBG("\tGreen: %i", green.val1);
-        LOG_DBG("\tIR: %i", ir.val1);
-        LOG_DBG("\tRed: %i", red.val1);
-        LOG_INF("\tx: %i", x.val1);
-        LOG_INF("\ty: %i", y.val1);
-        LOG_INF("\tz: %i", z.val1);
-    } else if ((value.val1 == MAX32664C_OP_MODE_ALGO_AEC) || (value.val1 == MAX32664C_OP_MODE_ALGO_AGC)) {
+#if LOG_DATA_FOR_PLOTTING
+    // Output format:
+    // GREEN1,<value>,;GREEN2,<value>,;IR1,<value>,;IR2,<value>,;RED1,<value>,;RED2,<value>,;X,<value>,;Y,<value>,;Z,<value>,
+    LOG_PRINTK(
+        "GREEN1,%i,;GREEN2,%i,;IR1,%i,;IR2,%i,;RED1,%i,;RED2,%i,;X,%i,;Y,%i,;Z,%i;",
+        green.val1, green.val2,
+        ir.val1, ir.val2,
+        red.val1, red.val2,
+        x.val1, y.val1, z.val1
+    );
+#else
+    LOG_DBG("\tGreen: %i", green.val1);
+    LOG_DBG("\tIR: %i", ir.val1);
+    LOG_DBG("\tRed: %i", red.val1);
+    LOG_INF("\tx: %i", x.val1);
+    LOG_INF("\ty: %i", y.val1);
+    LOG_INF("\tz: %i", z.val1);
+#endif
+    }
+
+    if ((value.val1 == MAX32664C_OP_MODE_ALGO_AEC) || (value.val1 == MAX32664C_OP_MODE_ALGO_AGC)) {
         struct sensor_value hr;
         struct sensor_value blood_oxygen;
 
@@ -168,7 +184,9 @@ static void hrs_notify(void)
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
         }
-    } else if ((value.val1 == MAX32664C_OP_MODE_ALGO_AEC_EXT) || (value.val1 == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
+    }
+
+    if ((value.val1 == MAX32664C_OP_MODE_ALGO_AEC_EXT) || (value.val1 == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
         struct sensor_value hr;
         struct sensor_value rr;
         struct sensor_value skin_contact;
@@ -180,28 +198,31 @@ static void hrs_notify(void)
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_SKIN_CONTACT, &skin_contact);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_ACTIVITY, &activity);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION, &blood_oxygen);
-
+#ifdef LOG_DATA_FOR_PLOTTING
+        //   Output format
+        //  HR,<value>,bpm;Conf,<value>;,RR,<value>;ms,SC,<value>;,Activity,<value>;,SpO2,<value>;%,Conf,<value>;,
+        LOG_PRINTK("HR,%u,bpm;"
+                "HR_Conf,%u,;"
+                "RR,%u,ms;"
+                "RR_Conf,%u,;"
+                "SC,%u,;"
+                "Activity,%u,;"
+                "SpO2,%u,%%;"
+                "SpO2_Conf,%u;",
+            hr.val1, hr.val2, rr.val1, rr.val2, skin_contact.val1, activity.val1, blood_oxygen.val1, blood_oxygen.val2);    
+#else
         LOG_INF("HR: %u bpm (Confidence: %u)", hr.val1, hr.val2);
         LOG_INF("SpO2: %u bpm (Confidence: %u)", blood_oxygen.val1, blood_oxygen.val2);
-
-        // Output format
-        //  HR,<value>,bpm;Conf,<value>;,RR,<value>;ms,SC,<value>;,Activity,<value>;,SpO2,<value>;%,Conf,<value>;,
-        //LOG_PRINTK("HR,%u,bpm;"
-        //           "HR_Conf,%u,;"
-        //           "RR,%u,ms;"
-        //           "RR_Conf,%u,;"
-        //           "SC,%u,;"
-        //           "Activity,%u,;"
-        //           "SpO2,%u,%%;"
-        //           "SpO2_Conf,%u,\n",
-        //    hr.val1, hr.val2, rr.val1, rr.val2, skin_contact.val1, activity.val1, blood_oxygen.val1, blood_oxygen.val2);
+#endif
 
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
         }
-    } else {
-        LOG_WRN("Unknown operation mode: %u", value.val1);
     }
+
+#ifdef LOG_DATA_FOR_PLOTTING
+    LOG_PRINTK("\n");
+#endif
 }
 
 static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err,
