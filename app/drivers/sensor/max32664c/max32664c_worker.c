@@ -168,7 +168,7 @@ static void max32664c_parse_and_push_ext_report(const struct device *dev)
 		(((uint16_t)(data->max32664_i2c_buffer[69]) << 8) | data->max32664_i2c_buffer[70]) /
 		10;
 	report.spo2_meas.complete = data->max32664_i2c_buffer[71];
-	report.spo2_meas.low_signal_flag = data->max32664_i2c_buffer[72];
+	report.spo2_meas.low_signal_quality_flag = data->max32664_i2c_buffer[72];
 	report.spo2_meas.excessive_motion_flag = data->max32664_i2c_buffer[73];
 	report.spo2_meas.low_pi_flag = data->max32664_i2c_buffer[74];
 	report.spo2_meas.unreliable_r_flag = data->max32664_i2c_buffer[75];
