@@ -198,7 +198,7 @@ static void hrs_notify(void)
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_SKIN_CONTACT, &skin_contact);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_ACTIVITY, &activity);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION, &blood_oxygen);
-#ifdef LOG_DATA_FOR_PLOTTING
+#if LOG_DATA_FOR_PLOTTING
         //   Output format
         //  HR,<value>,bpm;Conf,<value>;,RR,<value>;ms,SC,<value>;,Activity,<value>;,SpO2,<value>;%,Conf,<value>;,
         LOG_PRINTK("HR,%u,bpm;"
@@ -220,7 +220,7 @@ static void hrs_notify(void)
         }
     }
 
-#ifdef LOG_DATA_FOR_PLOTTING
+#if LOG_DATA_FOR_PLOTTING
     LOG_PRINTK("\n");
 #endif
 }

@@ -228,10 +228,9 @@ def plot_data(data):
     line4 = ax1_right.plot(
         plot_times,
         data["confidence"],
-        "s-",
+        "s",
         color=color_conf,
         label="Confidence",
-        linewidth=1.5,
         markersize=3,
         alpha=0.6,
     )
@@ -288,9 +287,9 @@ def plot_data(data):
         ax1.legend(lines, labels, loc="upper left", fontsize=9)
 
     # Plot 2: Skin Contact
-    # Color mapping: 0=red (none), 1=orange (contact not skin), 2=green (skin contact)
-    color_map_sc = {0: "red", 1: "orange", 2: "green"}
-    colors_sc = [color_map_sc.get(sc, "gray") for sc in data["skin_contact"]]
+    # Color mapping: 0=gray (undetected), 1=red (off skin), 2=orange (on subject), 3=green (on skin)
+    color_map_sc = {0: "gray", 1: "red", 2: "orange", 3: "green"}
+    colors_sc = [color_map_sc.get(sc, "purple") for sc in data["skin_contact"]]
     ax2.scatter(
         plot_times,
         data["skin_contact"],
@@ -306,9 +305,9 @@ def plot_data(data):
 
     ax2.set_ylabel("Skin Contact Level", fontsize=12, fontweight="bold")
     ax2.set_xlabel("Time", fontsize=12, fontweight="bold")
-    ax2.set_ylim(-0.5, 2.5)
-    ax2.set_yticks([0, 1, 2])
-    ax2.set_yticklabels(["None", "Contact\n(not skin)", "Skin\nContact"])
+    ax2.set_ylim(-0.5, 3.5)
+    ax2.set_yticks([0, 1, 2, 3])
+    ax2.set_yticklabels(["Undetected", "Off\nSkin", "On\nSubject", "On\nSkin"])
     ax2.yaxis.set_major_locator(MaxNLocator(integer=True))
     ax2.grid(True, alpha=0.3)
     ax2.set_title("Skin Contact Status", fontsize=13, fontweight="bold")
@@ -317,9 +316,10 @@ def plot_data(data):
     from matplotlib.patches import Patch
 
     legend_elements = [
-        Patch(facecolor="green", alpha=0.6, label="Skin Contact (2)"),
-        Patch(facecolor="orange", alpha=0.6, label="Contact, not skin (1)"),
-        Patch(facecolor="red", alpha=0.6, label="None (0)"),
+        Patch(facecolor="green", alpha=0.6, label="On Skin (3)"),
+        Patch(facecolor="orange", alpha=0.6, label="On Subject (2)"),
+        Patch(facecolor="red", alpha=0.6, label="Off Skin (1)"),
+        Patch(facecolor="gray", alpha=0.6, label="Undetected (0)"),
     ]
 
     # Add button press indicator to skin contact legend if present
