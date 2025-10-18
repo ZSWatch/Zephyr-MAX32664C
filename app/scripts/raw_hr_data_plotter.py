@@ -11,6 +11,7 @@ from typing import Dict, Optional
 
 import numpy as np
 import pylink
+from scipy import signal
 
 try:
     from PyQt5 import QtCore, QtWidgets  # type: ignore
@@ -49,6 +50,16 @@ PPG_Y_MIN = 0
 PPG_Y_MAX = 2000000
 ACC_Y_MIN = -1034
 ACC_Y_MAX = 1034
+
+# PSD Configuration
+PSD_WINDOW_LENGTH = 8.0  # seconds per Welch segment
+PSD_OVERLAP = 0.5  # 50% overlap
+PSD_UPDATE_INTERVAL = 0.5  # Update PSD every 0.5 seconds (2 Hz)
+PSD_FREQ_MIN = 0.0  # Hz
+PSD_FREQ_MAX = 5.0  # Hz
+PSD_HR_TOLERANCE = 0.1  # Hz around HR frequency for SNR calculation
+PSD_Y_MIN = -60  # dB/Hz
+PSD_Y_MAX = 40  # dB/Hz
 
 # Preallocated NumPy buffers for speed - no Python lists/deques in hot path
 buffers = {
@@ -332,6 +343,144 @@ def decimate(x: np.ndarray, y: np.ndarray, nmax: int) -> tuple[np.ndarray, np.nd
     return x[::step], y[::step]
 
 
+def compute_psd(time_data: np.ndarray, signal_data: np.ndarray, 
+                sample_rate: float) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute Power Spectral Density using Welch's method.
+    
+    Args:
+        time_data: Time array (not used, but kept for API consistency)
+        signal_data: Signal values
+        sample_rate: Effective sample rate in Hz
+    
+    Returns:
+        (frequencies, psd_db): frequency array and PSD in dB/Hz
+    """
+    if signal_data.size < 100:  # Need minimum samples
+        return np.array([]), np.array([])
+    
+    # Detrend: remove mean
+    signal_detrended = signal_data - np.mean(signal_data)
+    
+    # Calculate nperseg for ~8 second windows
+    nperseg = min(int(PSD_WINDOW_LENGTH * sample_rate), signal_detrended.size)
+    if nperseg < 64:  # Minimum segment length
+        nperseg = min(64, signal_detrended.size)
+    
+    # Compute PSD using Welch's method with Hann window
+    try:
+        freqs, psd = signal.welch(
+            signal_detrended,
+            fs=sample_rate,
+            window='hann',
+            nperseg=nperseg,
+            noverlap=int(nperseg * PSD_OVERLAP),
+            scaling='density',
+        )
+        
+        # Convert to dB/Hz, avoiding log(0)
+        psd_db = 10 * np.log10(psd + 1e-12)
+        
+        return freqs, psd_db
+    except Exception as exc:
+        log.warning("PSD computation failed: %s", exc)
+        return np.array([]), np.array([])
+
+
+def compute_psd_metrics(freqs: np.ndarray, psd_db: np.ndarray, 
+                        hr_bpm: float) -> Dict[str, float]:
+    """
+    Compute PSD quality metrics.
+    
+    Args:
+        freqs: Frequency array in Hz
+        psd_db: PSD in dB/Hz
+        hr_bpm: Current heart rate in bpm
+    
+    Returns:
+        Dictionary with metrics: peak_freq_hz, peak_freq_bpm, snr_db, 
+        noise_floor_db, peak_width_hz, hr_mismatch
+    """
+    metrics = {
+        "peak_freq_hz": 0.0,
+        "peak_freq_bpm": 0.0,
+        "snr_db": 0.0,
+        "noise_floor_db": 0.0,
+        "peak_width_hz": 0.0,
+        "hr_mismatch": False,
+    }
+    
+    if freqs.size == 0 or psd_db.size == 0:
+        return metrics
+    
+    # Limit analysis to 0.3-5.0 Hz (18-300 bpm)
+    valid_mask = (freqs >= 0.3) & (freqs <= 5.0)
+    if not np.any(valid_mask):
+        return metrics
+    
+    freqs_valid = freqs[valid_mask]
+    psd_valid = psd_db[valid_mask]
+    
+    # Find peak frequency
+    peak_idx = np.argmax(psd_valid)
+    peak_freq = freqs_valid[peak_idx]
+    metrics["peak_freq_hz"] = float(peak_freq)
+    metrics["peak_freq_bpm"] = float(peak_freq * 60.0)
+    
+    # Compute HR frequency
+    f_hr = hr_bpm / 60.0 if hr_bpm > 0 else 0.0
+    
+    # SNR computation if HR is valid
+    if 0.3 <= f_hr <= 5.0:
+        # Signal power: within ±0.1 Hz around HR frequency
+        signal_mask = np.abs(freqs_valid - f_hr) <= PSD_HR_TOLERANCE
+        if np.any(signal_mask):
+            # Use linear power for SNR calculation
+            psd_linear = 10 ** (psd_valid / 10.0)
+            signal_power = np.mean(psd_linear[signal_mask])
+            
+            # Noise power: rest of the band excluding HR region
+            noise_mask = ~signal_mask
+            if np.any(noise_mask):
+                noise_power = np.mean(psd_linear[noise_mask])
+                if noise_power > 0:
+                    snr_linear = signal_power / noise_power
+                    metrics["snr_db"] = float(10 * np.log10(snr_linear))
+                    metrics["noise_floor_db"] = float(10 * np.log10(noise_power))
+        
+        # Check for mismatch
+        if abs(peak_freq - f_hr) > 0.1:
+            metrics["hr_mismatch"] = True
+    else:
+        # If no valid HR, just compute noise floor
+        psd_linear = 10 ** (psd_valid / 10.0)
+        metrics["noise_floor_db"] = float(10 * np.log10(np.median(psd_linear)))
+    
+    # Compute FWHM (Full Width at Half Maximum) for peak width
+    try:
+        peak_power = psd_valid[peak_idx]
+        half_max = peak_power - 3.0  # -3 dB from peak (half power)
+        
+        # Find points above half maximum
+        above_half = psd_valid >= half_max
+        if np.sum(above_half) >= 2:
+            # Find the span of frequencies above half max around the peak
+            indices = np.where(above_half)[0]
+            # Get continuous region containing peak
+            peak_region = []
+            for i in indices:
+                if abs(i - peak_idx) <= len(indices):
+                    peak_region.append(i)
+            
+            if len(peak_region) >= 2:
+                width_hz = freqs_valid[max(peak_region)] - freqs_valid[min(peak_region)]
+                metrics["peak_width_hz"] = float(width_hz)
+    except Exception:
+        pass  # Keep default 0.0
+    
+    return metrics
+
+
 class HRPlotWindow(QtWidgets.QMainWindow):
     """PyQtGraph window hosting the live plots."""
 
@@ -341,8 +490,8 @@ class HRPlotWindow(QtWidgets.QMainWindow):
         self._on_clear = on_clear
         self._on_pause = on_pause
 
-        self.setWindowTitle("Heart Rate Sensor - Real-time Raw Data (PyQtGraph)")
-        self.resize(1280, 900)
+        self.setWindowTitle("Heart Rate Sensor - Real-time Raw Data with PSD (PyQtGraph)")
+        self.resize(1600, 900)
 
         pg.setConfigOptions(
             antialias=False,
@@ -401,6 +550,24 @@ class HRPlotWindow(QtWidgets.QMainWindow):
         self.clear_button = QtWidgets.QPushButton("Clear Data")
         self.clear_button.clicked.connect(self._handle_clear_clicked)
         controls_layout.addWidget(self.clear_button)
+        
+        # PSD Controls
+        psd_label = QtWidgets.QLabel("PSD:")
+        controls_layout.addWidget(psd_label)
+        
+        self.psd_lock_scale_checkbox = QtWidgets.QCheckBox("Lock Y-scale")
+        self.psd_lock_scale_checkbox.setChecked(True)
+        controls_layout.addWidget(self.psd_lock_scale_checkbox)
+        
+        self.psd_channel_combo = QtWidgets.QComboBox()
+        self.psd_channel_combo.addItems(["GREEN1", "GREEN2"])
+        self.psd_channel_combo.setCurrentIndex(0)
+        controls_layout.addWidget(self.psd_channel_combo)
+        
+        self.snapshot_button = QtWidgets.QPushButton("Snapshot")
+        self.snapshot_button.clicked.connect(self._handle_snapshot_clicked)
+        controls_layout.addWidget(self.snapshot_button)
+        
         controls_layout.addStretch()
 
         central_layout.addLayout(controls_layout)
@@ -516,11 +683,68 @@ class HRPlotWindow(QtWidgets.QMainWindow):
             curve.setClipToView(True)
             curve.setDownsampling(auto=True, method="peak")
 
+        # PSD plot
+        self.psd_plot = self._layout.addPlot(
+            row=0,
+            col=1,
+            rowspan=4,
+            title="PSD 0–5 Hz",
+        )
+        self.psd_plot.showGrid(x=True, y=True, alpha=0.3)
+        self.psd_plot.setLabel("left", "Power (dB/Hz)")
+        self.psd_plot.setLabel("bottom", "Frequency (Hz)")
+        self.psd_plot.setXRange(PSD_FREQ_MIN, PSD_FREQ_MAX, padding=0)
+        self.psd_plot.setYRange(PSD_Y_MIN, PSD_Y_MAX)
+        self.psd_plot.setLimits(xMin=0, xMax=6, yMin=-80, yMax=60)
+        self.psd_plot.setMouseEnabled(x=False, y=True)
+        self.psd_plot.addLegend(offset=(10, 10))
+        self.psd_plot.legend.setBrush(pg.mkBrush(255, 255, 255, 180))
+        
+        # PSD curves for GREEN1 and GREEN2
+        self.psd_curve_green1 = self.psd_plot.plot(
+            pen=pg.mkPen(color="#1f77b4", width=2),
+            name="GREEN1",
+        )
+        self.psd_curve_green2 = self.psd_plot.plot(
+            pen=pg.mkPen(color="#d62728", width=2),
+            name="GREEN2",
+        )
+        
+        # HR frequency marker (vertical line)
+        self.psd_hr_line = pg.InfiniteLine(
+            angle=90,
+            movable=False,
+            pen=pg.mkPen(color="#2ca02c", width=2, style=QtCore.Qt.PenStyle.DashLine),
+            label="HR",
+        )
+        self.psd_plot.addItem(self.psd_hr_line)
+        self.psd_hr_line.setVisible(False)
+        
+        # HR tolerance region (shaded)
+        self.psd_hr_region = pg.LinearRegionItem(
+            values=[0, 0],
+            orientation='vertical',
+            brush=pg.mkBrush(44, 160, 44, 50),
+            movable=False,
+        )
+        self.psd_plot.addItem(self.psd_hr_region)
+        self.psd_hr_region.setVisible(False)
+        
+        # Metrics text overlay
+        self.psd_metrics_text = pg.TextItem(
+            color=(0, 0, 0),
+            anchor=(1, 0),
+            fill=pg.mkBrush(255, 255, 255, 200),
+        )
+        self.psd_plot.addItem(self.psd_metrics_text)
+
         layout = self._layout.ci.layout
         layout.setRowStretchFactor(0, 2)  # GREEN1
         layout.setRowStretchFactor(1, 2)  # GREEN2
-        layout.setRowStretchFactor(2, 2)  # HR & Confidence (increased from 1 to 2)
+        layout.setRowStretchFactor(2, 2)  # HR & Confidence
         layout.setRowStretchFactor(3, 1)  # Accelerometer
+        layout.setColumnStretchFactor(0, 2)  # Time series plots
+        layout.setColumnStretchFactor(1, 1)  # PSD plot
 
     def _configure_ppg_plot(self, plot: pg.PlotItem, ylabel: str) -> None:
         plot.showGrid(x=True, y=True, alpha=0.3)
@@ -595,6 +819,115 @@ class HRPlotWindow(QtWidgets.QMainWindow):
         self.hr_conf_scatter.setData([], [])
         self.green1_text.setText("")
         self.green2_text.setText("")
+        
+        # Clear PSD plot
+        self.psd_curve_green1.setData([], [])
+        self.psd_curve_green2.setData([], [])
+        self.psd_hr_line.setVisible(False)
+        self.psd_hr_region.setVisible(False)
+        self.psd_metrics_text.setHtml("")
+
+    def update_psd_plot(
+        self,
+        freqs_green1: np.ndarray,
+        psd_green1: np.ndarray,
+        freqs_green2: np.ndarray,
+        psd_green2: np.ndarray,
+        hr_bpm: float,
+        metrics_green1: Dict[str, float],
+        metrics_green2: Dict[str, float],
+    ) -> None:
+        """Update PSD plot with new data and metrics."""
+        # Update curves
+        if freqs_green1.size > 0:
+            self.psd_curve_green1.setData(freqs_green1, psd_green1)
+        if freqs_green2.size > 0:
+            self.psd_curve_green2.setData(freqs_green2, psd_green2)
+        
+        # Update HR marker
+        f_hr = hr_bpm / 60.0 if hr_bpm > 0 else 0.0
+        if 0.3 <= f_hr <= 5.0:
+            self.psd_hr_line.setPos(f_hr)
+            self.psd_hr_line.setVisible(True)
+            
+            # Update tolerance region
+            self.psd_hr_region.setRegion([
+                f_hr - PSD_HR_TOLERANCE,
+                f_hr + PSD_HR_TOLERANCE
+            ])
+            self.psd_hr_region.setVisible(True)
+        else:
+            self.psd_hr_line.setVisible(False)
+            self.psd_hr_region.setVisible(False)
+        
+        # Update metrics text
+        primary_channel = self.psd_channel_combo.currentText()
+        metrics = metrics_green1 if primary_channel == "GREEN1" else metrics_green2
+        
+        # Format metrics with color coding
+        snr = metrics["snr_db"]
+        if snr >= 10.0:
+            snr_color = "green"
+            snr_status = "GOOD"
+        elif snr >= 5.0:
+            snr_color = "orange"
+            snr_status = "WARN"
+        else:
+            snr_color = "red"
+            snr_status = "POOR"
+        
+        metrics_lines = [
+            f"<b>{primary_channel} Metrics:</b>",
+            f"<span style='color: {snr_color};'>SNR@HR: {snr:.1f} dB ({snr_status})</span>",
+            f"Peak: {metrics['peak_freq_hz']:.2f} Hz ({metrics['peak_freq_bpm']:.0f} bpm)",
+            f"Noise floor: {metrics['noise_floor_db']:.1f} dB",
+            f"Peak width: {metrics['peak_width_hz']:.2f} Hz",
+        ]
+        
+        if metrics["hr_mismatch"]:
+            metrics_lines.append("<span style='color: red;'><b>⚠ MISMATCH</b></span>")
+        
+        if metrics["peak_width_hz"] > 0.4:
+            metrics_lines.append("<span style='color: orange;'><b>⚠ BROAD PEAK</b></span>")
+        
+        metrics_html = "<br>".join(metrics_lines)
+        self.psd_metrics_text.setHtml(metrics_html)
+        
+        # Position metrics text in top-right corner
+        (xmin, xmax), (ymin, ymax) = self.psd_plot.getViewBox().viewRange()
+        x_pos = xmax - 0.02 * (xmax - xmin)
+        y_pos = ymax - 0.02 * (ymax - ymin)
+        self.psd_metrics_text.setPos(x_pos, y_pos)
+        
+        # Auto-scale Y if not locked
+        if not self.psd_lock_scale_checkbox.isChecked():
+            all_psd = np.concatenate([psd_green1, psd_green2]) if psd_green1.size > 0 and psd_green2.size > 0 else (psd_green1 if psd_green1.size > 0 else psd_green2)
+            if all_psd.size > 0:
+                ymin_data = float(np.min(all_psd))
+                ymax_data = float(np.max(all_psd))
+                span = max(10.0, ymax_data - ymin_data)
+                self.psd_plot.setYRange(ymin_data - 5, ymin_data + span + 5, padding=0)
+
+    def _handle_snapshot_clicked(self) -> None:
+        """Save current PSD snapshot."""
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        filename = f"psd_snapshot_{timestamp}.png"
+        
+        try:
+            # Export the PSD plot
+            exporter = pg.exporters.ImageExporter(self.psd_plot.scene())
+            exporter.export(filename)
+            log.info("Saved PSD snapshot to %s", filename)
+            
+            # Also log metrics to a text file
+            metrics_file = f"psd_metrics_{timestamp}.txt"
+            with open(metrics_file, "w") as f:
+                f.write(f"Timestamp: {timestamp}\n")
+                f.write(self.psd_metrics_text.toPlainText())
+            log.info("Saved PSD metrics to %s", metrics_file)
+        except Exception as exc:
+            log.error("Failed to save snapshot: %s", exc)
 
     def _handle_clear_clicked(self) -> None:
         if callable(self._on_clear):
@@ -640,6 +973,7 @@ class HRPlotController(QtCore.QObject):
         self.timer.setInterval(update_interval_ms)
         self.timer.timeout.connect(self.update_plots)
         self._last_autoscale = 0.0
+        self._last_psd_update = 0.0
         self._paused = False
 
     def start(self) -> None:
@@ -662,6 +996,7 @@ class HRPlotController(QtCore.QObject):
         clear_stream_buffers()
         self.window.reset_display()
         self._last_autoscale = 0.0
+        self._last_psd_update = 0.0
 
     def update_plots(self) -> None:  # pragma: no cover - requires hardware
         # Skip data reading and plotting if paused
@@ -704,6 +1039,46 @@ class HRPlotController(QtCore.QObject):
         self.window.update_stats_label(self.window.ppg1_plot, self.window.green1_text, windowed["GREEN1"])
         self.window.update_stats_label(self.window.ppg2_plot, self.window.green2_text, windowed["GREEN2"])
         self.window.update_status_label(windowed)
+        
+        # Update PSD at slower rate (2 Hz max)
+        if now - self._last_psd_update >= PSD_UPDATE_INTERVAL:
+            self._update_psd(windowed)
+            self._last_psd_update = now
+
+    def _update_psd(self, windowed: Dict[str, np.ndarray]) -> None:
+        """Compute and update PSD plot."""
+        time_data = windowed["time"]
+        
+        if time_data.size < 100:  # Need sufficient data
+            return
+        
+        # Calculate effective sample rate
+        if time_data[-1] > time_data[0]:
+            sample_rate = time_data.size / (time_data[-1] - time_data[0])
+        else:
+            return
+        
+        # Get current HR
+        hr_bpm = float(windowed["HR"][-1]) if windowed["HR"].size > 0 else 0.0
+        
+        # Compute PSD for GREEN1
+        freqs_green1, psd_green1 = compute_psd(time_data, windowed["GREEN1"], sample_rate)
+        metrics_green1 = compute_psd_metrics(freqs_green1, psd_green1, hr_bpm)
+        
+        # Compute PSD for GREEN2
+        freqs_green2, psd_green2 = compute_psd(time_data, windowed["GREEN2"], sample_rate)
+        metrics_green2 = compute_psd_metrics(freqs_green2, psd_green2, hr_bpm)
+        
+        # Update the plot
+        self.window.update_psd_plot(
+            freqs_green1,
+            psd_green1,
+            freqs_green2,
+            psd_green2,
+            hr_bpm,
+            metrics_green1,
+            metrics_green2,
+        )
 
     def _autoscale_ppg(self, data: np.ndarray, plot: pg.PlotItem) -> None:
         if data.size < 3:
