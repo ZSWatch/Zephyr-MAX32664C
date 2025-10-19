@@ -22,6 +22,7 @@ except ImportError:  # pragma: no cover - runtime fallback only
     QT_API = "PySide6"
 
 import pyqtgraph as pg
+from pyqtgraph.exporters import ImageExporter
 
 from utils import current_milli_time
 
@@ -1115,7 +1116,7 @@ class HRPlotWindow(QtWidgets.QMainWindow):
                 return
 
             # Export the PSD plot
-            exporter = pg.exporters.ImageExporter(self.psd_plot.scene())
+            exporter = ImageExporter(self.psd_plot.scene())
             exporter.export(filename)
             log.info("Saved PSD snapshot to %s", filename)
 
