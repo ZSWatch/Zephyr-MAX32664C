@@ -377,6 +377,6 @@ void max32664c_worker(const struct device *dev)
 		k_free(data->max32664_i2c_buffer);
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 
-		k_msleep(100);
+		k_msleep(5);
 	}
 }

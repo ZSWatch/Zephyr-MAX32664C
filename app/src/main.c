@@ -136,6 +136,10 @@ static void hrs_notify(void)
 
     sensor_sample_fetch(sensor_hub);
     sensor_attr_get(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, SENSOR_ATTR_MAX32664C_OP_MODE, &value);
+
+#if LOG_DATA_FOR_PLOTTING
+    LOG_PRINTK("TS,%d,ms;", k_uptime_get_32());
+#endif
     if ((value.val1 == MAX32664C_OP_MODE_RAW) || (value.val1 == MAX32664C_OP_MODE_ALGO_AEC_EXT) || (value.val1 == MAX32664C_OP_MODE_ALGO_AGC_EXT)) {
         struct sensor_value x;
         struct sensor_value y;
@@ -365,13 +369,20 @@ int main(void)
     int i = 0;
     while (1)
     {
-        // Poll button every 100ms
-        check_button();
-
-        // Send heart rate notification every second (every 10 iterations)
+        // Poll button every 100ms (every 10 iterations)
         if (i % 10 == 0) {
+            check_button();
+        }
+
+#if LOG_DATA_FOR_PLOTTING
+        // Output data every 10ms (100Hz) for plotting
+        hrs_notify();
+#else
+        // Output data every second (every 100 iterations)
+        if (i % 100 == 0) {
             hrs_notify();
         }
+#endif
 
         if (atomic_test_bit(state, BLE_CONNECTED)) {
             LOG_INF("Connected!");
@@ -381,15 +392,15 @@ int main(void)
         } else if (atomic_test_and_clear_bit(state, BLE_DISCONNECTED)) {
         }
 
-        // Blink LED every 5 seconds (every 50 iterations)
-        if (i % 50 == 0) {
+        // Blink LED every 5 seconds (every 500 iterations)
+        if (i % 500 == 0) {
             gpio_pin_toggle_dt(&led_green);
             k_msleep(100);
             gpio_pin_toggle_dt(&led_green);
         }
         i++;
 
-        k_msleep(100);
+        k_msleep(10);
     }
 
     return 0;

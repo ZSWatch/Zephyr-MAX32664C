@@ -4,6 +4,7 @@ Real-time plotter for heart rate sensor raw data (PPG and accelerometer).
 Streams data via RTT and renders with PyQtGraph for high-frequency updates.
 """
 
+import csv
 import logging
 import sys
 import time
@@ -57,7 +58,11 @@ PSD_OVERLAP = 0.5  # 50% overlap
 PSD_UPDATE_INTERVAL = 0.5  # Update PSD every 0.5 seconds (2 Hz)
 PSD_FREQ_MIN = 0.0  # Hz
 PSD_FREQ_MAX = 5.0  # Hz
-PSD_HR_TOLERANCE = 0.1  # Hz around HR frequency for SNR calculation
+PSD_ANALYSIS_MIN_HZ = 0.3  # Hz (physiological lower bound)
+PSD_ANALYSIS_MAX_HZ = 5.0  # Hz (physiological upper bound)
+PSD_PEAK_TOLERANCE_HZ = 0.12  # Hz half-bandwidth around dominant peak
+PSD_HIGHPASS_CUTOFF_HZ = 0.2  # Light high-pass for PSD-only detrending
+EMBEDDED_HR_CONF_THRESHOLD = 70.0  # % threshold for mismatch diagnostics
 PSD_Y_MIN = -60  # dB/Hz
 PSD_Y_MAX = 40  # dB/Hz
 
@@ -86,6 +91,8 @@ buffers = {
 # Global variables
 jlink = None
 start_time = None
+ts_start_ms: Optional[float] = None
+last_elapsed_time = 0.0
 line_buffer = ""
 sample_count = 0
 write_idx = 0  # Circular buffer index
@@ -151,7 +158,7 @@ def init_jlink() -> None:
 
 def read_rtt_data() -> int:
     """Read data from RTT and parse it into the circular buffer."""
-    global line_buffer, sample_count, write_idx
+    global line_buffer, sample_count, write_idx, ts_start_ms, last_elapsed_time
 
     if not jlink or not jlink.connected():
         return 0
@@ -173,7 +180,18 @@ def read_rtt_data() -> int:
             if not parsed_data:
                 continue
 
-            elapsed_time = (current_milli_time() - start_time) / 1000.0
+            if "TS" in parsed_data:
+                ts_value = float(parsed_data["TS"])
+                if ts_start_ms is None:
+                    ts_start_ms = ts_value
+                elapsed_time = max(0.0, (ts_value - ts_start_ms) / 1000.0)
+            else:
+                elapsed_time = (current_milli_time() - start_time) / 1000.0
+            if write_idx > 0:
+                prev_time = last_elapsed_time
+                if elapsed_time <= prev_time:
+                    elapsed_time = prev_time + (1.0 / max(1.0, SAMPLE_RATE))
+            last_elapsed_time = elapsed_time
             idx = write_idx % MAX_POINTS
             buffers["time"][idx] = elapsed_time
             buffers["GREEN1"][idx] = parsed_data["GREEN1"]
@@ -250,13 +268,15 @@ def read_rtt_data() -> int:
 
 def clear_stream_buffers() -> None:
     """Reset circular buffers and associated counters."""
-    global line_buffer, sample_count, write_idx, start_time
+    global line_buffer, sample_count, write_idx, start_time, ts_start_ms, last_elapsed_time
     for array in buffers.values():
         array.fill(0)
     line_buffer = ""
     sample_count = 0
     write_idx = 0
     start_time = current_milli_time()
+    ts_start_ms = None
+    last_elapsed_time = 0.0
     log.info("Cleared buffered samples.")
 
 
@@ -343,141 +363,217 @@ def decimate(x: np.ndarray, y: np.ndarray, nmax: int) -> tuple[np.ndarray, np.nd
     return x[::step], y[::step]
 
 
-def compute_psd(time_data: np.ndarray, signal_data: np.ndarray, 
-                sample_rate: float) -> tuple[np.ndarray, np.ndarray]:
+def compute_psd(
+    time_data: np.ndarray,
+    signal_data: np.ndarray,
+    sample_rate: float,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, int]:
     """
     Compute Power Spectral Density using Welch's method.
-    
+
     Args:
-        time_data: Time array (not used, but kept for API consistency)
+        time_data: Time array (retained for API symmetry; unused)
         signal_data: Signal values
         sample_rate: Effective sample rate in Hz
-    
+
     Returns:
-        (frequencies, psd_db): frequency array and PSD in dB/Hz
+        (frequencies, psd_linear, psd_db, nperseg)
     """
-    if signal_data.size < 100:  # Need minimum samples
-        return np.array([]), np.array([])
-    
-    # Detrend: remove mean
+    if signal_data.size < 100 or sample_rate <= 0.0:
+        return np.array([]), np.array([]), np.array([]), 0
+
+    # Detrend by removing the mean, then apply a light high-pass for PSD only
     signal_detrended = signal_data - np.mean(signal_data)
-    
-    # Calculate nperseg for ~8 second windows
-    nperseg = min(int(PSD_WINDOW_LENGTH * sample_rate), signal_detrended.size)
-    if nperseg < 64:  # Minimum segment length
-        nperseg = min(64, signal_detrended.size)
-    
-    # Compute PSD using Welch's method with Hann window
+
+    if signal_detrended.size > 3:
+        nyquist = 0.5 * sample_rate
+        cutoff = min(PSD_HIGHPASS_CUTOFF_HZ, nyquist * 0.99)
+        if 0 < cutoff < nyquist:
+            norm_cut = cutoff / nyquist
+            try:
+                sos = signal.butter(
+                    N=2,
+                    Wn=norm_cut,
+                    btype="highpass",
+                    output="sos",
+                )
+                padlen = min(250, signal_detrended.size - 1)
+                if padlen >= 1:
+                    signal_detrended = signal.sosfiltfilt(sos, signal_detrended, padlen=padlen)
+                else:
+                    signal_detrended = signal.sosfilt(sos, signal_detrended)
+            except ValueError:
+                pass  # Fallback to mean-only detrending if filter fails
+
+    # Welch segment sizing: target ~PSD_WINDOW_LENGTH seconds, but ensure >= 4*fs when possible
+    target_nperseg = int(PSD_WINDOW_LENGTH * sample_rate)
+    min_required = int(4 * sample_rate) if sample_rate > 0 else 0
+    nperseg = max(64, target_nperseg, min_required)
+    nperseg = min(signal_detrended.size, nperseg)
+    if nperseg <= 1:
+        return np.array([]), np.array([]), np.array([]), 0
+
     try:
-        freqs, psd = signal.welch(
+        freqs, psd_linear = signal.welch(
             signal_detrended,
             fs=sample_rate,
-            window='hann',
+            window="hann",
             nperseg=nperseg,
             noverlap=int(nperseg * PSD_OVERLAP),
-            scaling='density',
+            scaling="density",
         )
-        
-        # Convert to dB/Hz, avoiding log(0)
-        psd_db = 10 * np.log10(psd + 1e-12)
-        
-        return freqs, psd_db
-    except Exception as exc:
+        psd_db = 10 * np.log10(psd_linear + 1e-12)
+        return freqs, psd_linear, psd_db, nperseg
+    except Exception as exc:  # pragma: no cover - defensive logging
         log.warning("PSD computation failed: %s", exc)
-        return np.array([]), np.array([])
+        return np.array([]), np.array([]), np.array([]), 0
 
 
-def compute_psd_metrics(freqs: np.ndarray, psd_db: np.ndarray, 
-                        hr_bpm: float) -> Dict[str, float]:
+def compute_psd_metrics(
+    freqs: np.ndarray,
+    psd_linear: np.ndarray,
+    psd_db: np.ndarray,
+    sample_rate: float,
+    nperseg: int,
+    embedded_hr_bpm: float,
+    embedded_hr_conf: float,
+    use_embedded_reference: bool = False,
+) -> Dict[str, float | str | bool]:
     """
-    Compute PSD quality metrics.
-    
-    Args:
-        freqs: Frequency array in Hz
-        psd_db: PSD in dB/Hz
-        hr_bpm: Current heart rate in bpm
-    
-    Returns:
-        Dictionary with metrics: peak_freq_hz, peak_freq_bpm, snr_db, 
-        noise_floor_db, peak_width_hz, hr_mismatch
+    Derive hardware and comparison metrics from a PSD estimate.
     """
-    metrics = {
-        "peak_freq_hz": 0.0,
-        "peak_freq_bpm": 0.0,
-        "snr_db": 0.0,
-        "noise_floor_db": 0.0,
-        "peak_width_hz": 0.0,
-        "hr_mismatch": False,
+    metrics: Dict[str, float | str | bool] = {
+        "peak_freq_hz": float("nan"),
+        "peak_bpm": float("nan"),
+        "peak_power_db": float("nan"),
+        "peak_prom_db": float("nan"),
+        "peak_width_hz": float("nan"),
+        "snr_db": float("nan"),
+        "noise_floor_db": float("nan"),
+        "signal_bandwidth_hz": float("nan"),
+        "center_freq_hz": float("nan"),
+        "center_label": "peak",
+        "freq_tolerance_hz": float("nan"),
+        "delta_f_hz": float("nan"),
+        "fs_hz": float(sample_rate),
+        "nperseg": float(nperseg),
+        "embedded_hr_bpm": float(embedded_hr_bpm),
+        "embedded_hr_conf": float(embedded_hr_conf),
+        "mismatch": False,
+        "mismatch_reason": "Embedded HR unavailable",
+        "mismatch_bpm_diff": float("nan"),
+        "tolerance_bpm": float("nan"),
+        "peak_power_linear": float("nan"),
+        "noise_density_linear": float("nan"),
     }
-    
-    if freqs.size == 0 or psd_db.size == 0:
+
+    if freqs.size == 0 or psd_linear.size == 0 or psd_db.size == 0:
         return metrics
-    
-    # Limit analysis to 0.3-5.0 Hz (18-300 bpm)
-    valid_mask = (freqs >= 0.3) & (freqs <= 5.0)
-    if not np.any(valid_mask):
+
+    band_mask = (freqs >= PSD_ANALYSIS_MIN_HZ) & (freqs <= PSD_ANALYSIS_MAX_HZ)
+    if not np.any(band_mask):
         return metrics
-    
-    freqs_valid = freqs[valid_mask]
-    psd_valid = psd_db[valid_mask]
-    
-    # Find peak frequency
-    peak_idx = np.argmax(psd_valid)
-    peak_freq = freqs_valid[peak_idx]
-    metrics["peak_freq_hz"] = float(peak_freq)
-    metrics["peak_freq_bpm"] = float(peak_freq * 60.0)
-    
-    # Compute HR frequency
-    f_hr = hr_bpm / 60.0 if hr_bpm > 0 else 0.0
-    
-    # SNR computation if HR is valid
-    if 0.3 <= f_hr <= 5.0:
-        # Signal power: within ±0.1 Hz around HR frequency
-        signal_mask = np.abs(freqs_valid - f_hr) <= PSD_HR_TOLERANCE
-        if np.any(signal_mask):
-            # Use linear power for SNR calculation
-            psd_linear = 10 ** (psd_valid / 10.0)
-            signal_power = np.mean(psd_linear[signal_mask])
-            
-            # Noise power: rest of the band excluding HR region
-            noise_mask = ~signal_mask
-            if np.any(noise_mask):
-                noise_power = np.mean(psd_linear[noise_mask])
-                if noise_power > 0:
-                    snr_linear = signal_power / noise_power
-                    metrics["snr_db"] = float(10 * np.log10(snr_linear))
-                    metrics["noise_floor_db"] = float(10 * np.log10(noise_power))
-        
-        # Check for mismatch
-        if abs(peak_freq - f_hr) > 0.1:
-            metrics["hr_mismatch"] = True
+
+    freqs_band = freqs[band_mask]
+    psd_linear_band = psd_linear[band_mask]
+    psd_db_band = psd_db[band_mask]
+
+    if freqs_band.size == 0:
+        return metrics
+
+    df = float(np.median(np.diff(freqs_band))) if freqs_band.size > 1 else float("nan")
+    metrics["delta_f_hz"] = df
+
+    peak_idx = int(np.argmax(psd_linear_band))
+    peak_freq_hz = float(freqs_band[peak_idx])
+    peak_bpm = peak_freq_hz * 60.0
+    peak_power_linear = float(psd_linear_band[peak_idx])
+    peak_power_db = float(10 * np.log10(peak_power_linear + 1e-12))
+
+    metrics["peak_freq_hz"] = peak_freq_hz
+    metrics["peak_bpm"] = peak_bpm
+    metrics["peak_power_db"] = peak_power_db
+    metrics["peak_power_linear"] = peak_power_linear
+
+    # Peak width via contiguous half-power points (FWHM)
+    if np.isfinite(peak_power_linear) and peak_power_linear > 0:
+        half_power = peak_power_linear / 2.0
+        left = peak_idx
+        while left > 0 and psd_linear_band[left - 1] >= half_power:
+            left -= 1
+        right = peak_idx
+        while right < psd_linear_band.size - 1 and psd_linear_band[right + 1] >= half_power:
+            right += 1
+        if right > left:
+            metrics["peak_width_hz"] = float(freqs_band[right] - freqs_band[left])
+
+    center_freq_hz = peak_freq_hz
+    center_label = "peak"
+    if use_embedded_reference and embedded_hr_bpm > 0:
+        center_freq_hz = embedded_hr_bpm / 60.0
+        center_label = "embedded"
+    metrics["center_freq_hz"] = float(center_freq_hz)
+    metrics["center_label"] = center_label
+
+    freq_tolerance = float("nan")
+    if np.isfinite(df):
+        freq_tolerance = max(PSD_PEAK_TOLERANCE_HZ, 2.0 * df)
+    elif freqs_band.size > 1:
+        freq_tolerance = max(PSD_PEAK_TOLERANCE_HZ, float(freqs_band[1] - freqs_band[0]) * 2.0)
     else:
-        # If no valid HR, just compute noise floor
-        psd_linear = 10 ** (psd_valid / 10.0)
-        metrics["noise_floor_db"] = float(10 * np.log10(np.median(psd_linear)))
-    
-    # Compute FWHM (Full Width at Half Maximum) for peak width
-    try:
-        peak_power = psd_valid[peak_idx]
-        half_max = peak_power - 3.0  # -3 dB from peak (half power)
-        
-        # Find points above half maximum
-        above_half = psd_valid >= half_max
-        if np.sum(above_half) >= 2:
-            # Find the span of frequencies above half max around the peak
-            indices = np.where(above_half)[0]
-            # Get continuous region containing peak
-            peak_region = []
-            for i in indices:
-                if abs(i - peak_idx) <= len(indices):
-                    peak_region.append(i)
-            
-            if len(peak_region) >= 2:
-                width_hz = freqs_valid[max(peak_region)] - freqs_valid[min(peak_region)]
-                metrics["peak_width_hz"] = float(width_hz)
-    except Exception:
-        pass  # Keep default 0.0
-    
+        freq_tolerance = PSD_PEAK_TOLERANCE_HZ
+    metrics["freq_tolerance_hz"] = float(freq_tolerance)
+
+    signal_mask = np.abs(freqs_band - center_freq_hz) <= freq_tolerance
+    harmonic_mask = np.abs(freqs_band - (2.0 * center_freq_hz)) <= freq_tolerance
+
+    signal_bandwidth_hz = float(np.sum(signal_mask) * (df if np.isfinite(df) else 0.0))
+    metrics["signal_bandwidth_hz"] = signal_bandwidth_hz
+
+    signal_power = float("nan")
+    if np.any(signal_mask) and signal_bandwidth_hz > 0:
+        signal_power = float(np.sum(psd_linear_band[signal_mask]) * (df if np.isfinite(df) else 0.0))
+
+    noise_mask = ~(signal_mask | harmonic_mask)
+    if np.any(noise_mask):
+        noise_density = float(np.median(psd_linear_band[noise_mask]))
+    else:
+        noise_density = float(np.median(psd_linear_band))
+    metrics["noise_density_linear"] = noise_density
+    metrics["noise_floor_db"] = float(10 * np.log10(noise_density + 1e-12))
+
+    if np.isfinite(peak_power_db) and np.isfinite(metrics["noise_floor_db"]):
+        metrics["peak_prom_db"] = float(peak_power_db - metrics["noise_floor_db"])
+
+    if np.isfinite(signal_power) and signal_power > 0 and noise_density > 0 and signal_bandwidth_hz > 0:
+        noise_power = noise_density * signal_bandwidth_hz
+        snr_linear = signal_power / noise_power if noise_power > 0 else float("inf")
+        metrics["snr_db"] = float(10 * np.log10(snr_linear + 1e-12))
+
+    tolerance_hz = float(freq_tolerance)
+    metrics["tolerance_bpm"] = float(tolerance_hz * 60.0)
+
+    if embedded_hr_bpm > 0:
+        metrics["mismatch_bpm_diff"] = float(abs(peak_bpm - embedded_hr_bpm))
+        if embedded_hr_conf >= EMBEDDED_HR_CONF_THRESHOLD:
+            if np.isfinite(tolerance_hz):
+                diff_hz = abs(peak_freq_hz - embedded_hr_bpm / 60.0)
+                if diff_hz > tolerance_hz:
+                    metrics["mismatch"] = True
+                    metrics[
+                        "mismatch_reason"
+                    ] = f"|Δ|={metrics['mismatch_bpm_diff']:.1f} bpm > {metrics['tolerance_bpm']:.1f} bpm tolerance"
+                else:
+                    metrics[
+                        "mismatch_reason"
+                    ] = f"|Δ|={metrics['mismatch_bpm_diff']:.1f} bpm ≤ {metrics['tolerance_bpm']:.1f} bpm tolerance"
+            else:
+                metrics["mismatch_reason"] = "Δf undefined; cannot assess mismatch"
+        else:
+            metrics[
+                "mismatch_reason"
+            ] = f"HR_Conf {embedded_hr_conf:.0f}% < {EMBEDDED_HR_CONF_THRESHOLD:.0f}% threshold"
+
     return metrics
 
 
@@ -563,6 +659,11 @@ class HRPlotWindow(QtWidgets.QMainWindow):
         self.psd_channel_combo.addItems(["GREEN1", "GREEN2"])
         self.psd_channel_combo.setCurrentIndex(0)
         controls_layout.addWidget(self.psd_channel_combo)
+
+        self.use_embedded_checkbox = QtWidgets.QCheckBox("Use embedded HR for metrics")
+        self.use_embedded_checkbox.setChecked(False)
+        self.use_embedded_checkbox.toggled.connect(self._handle_use_embedded_toggled)
+        controls_layout.addWidget(self.use_embedded_checkbox)
         
         self.snapshot_button = QtWidgets.QPushButton("Snapshot")
         self.snapshot_button.clicked.connect(self._handle_snapshot_clicked)
@@ -575,6 +676,12 @@ class HRPlotWindow(QtWidgets.QMainWindow):
         self._layout = pg.GraphicsLayoutWidget()
         central_layout.addWidget(self._layout)
         self.setCentralWidget(central)
+
+        self.channel_colors = {
+            "GREEN1": "#1f77b4",
+            "GREEN2": "#d62728",
+        }
+        self._latest_psd_metrics: Optional[Dict[str, Dict[str, object]]] = None
 
         # GREEN1 plot
         self.ppg1_plot = self._layout.addPlot(
@@ -709,27 +816,37 @@ class HRPlotWindow(QtWidgets.QMainWindow):
             pen=pg.mkPen(color="#d62728", width=2),
             name="GREEN2",
         )
-        
-        # HR frequency marker (vertical line)
-        self.psd_hr_line = pg.InfiniteLine(
+
+        # PSD peak marker (solid)
+        self.psd_peak_line = pg.InfiniteLine(
+            angle=90,
+            movable=False,
+            pen=pg.mkPen(color="#1f77b4", width=2),
+            label="PSD Peak",
+        )
+        self.psd_plot.addItem(self.psd_peak_line)
+        self.psd_peak_line.setVisible(False)
+
+        # Embedded HR marker (dashed)
+        self.psd_embedded_line = pg.InfiniteLine(
             angle=90,
             movable=False,
             pen=pg.mkPen(color="#2ca02c", width=2, style=QtCore.Qt.PenStyle.DashLine),
-            label="HR",
+            label="Embedded HR",
         )
-        self.psd_plot.addItem(self.psd_hr_line)
-        self.psd_hr_line.setVisible(False)
-        
-        # HR tolerance region (shaded)
-        self.psd_hr_region = pg.LinearRegionItem(
+        self.psd_plot.addItem(self.psd_embedded_line)
+        self.psd_embedded_line.setVisible(False)
+
+        # Embedded HR tolerance region (shaded)
+        self.psd_embedded_region = pg.LinearRegionItem(
             values=[0, 0],
-            orientation='vertical',
+            orientation="vertical",
             brush=pg.mkBrush(44, 160, 44, 50),
             movable=False,
         )
-        self.psd_plot.addItem(self.psd_hr_region)
-        self.psd_hr_region.setVisible(False)
-        
+        self.psd_plot.addItem(self.psd_embedded_region)
+        self.psd_embedded_region.setVisible(False)
+
         # Metrics text overlay
         self.psd_metrics_text = pg.TextItem(
             color=(0, 0, 0),
@@ -823,9 +940,17 @@ class HRPlotWindow(QtWidgets.QMainWindow):
         # Clear PSD plot
         self.psd_curve_green1.setData([], [])
         self.psd_curve_green2.setData([], [])
-        self.psd_hr_line.setVisible(False)
-        self.psd_hr_region.setVisible(False)
+        self.psd_peak_line.setVisible(False)
+        self.psd_embedded_line.setVisible(False)
+        self.psd_embedded_region.setVisible(False)
         self.psd_metrics_text.setHtml("")
+
+    def use_embedded_hr_metrics(self) -> bool:
+        return self.use_embedded_checkbox.isChecked()
+
+    def _handle_use_embedded_toggled(self, checked: bool) -> None:
+        mode = "embedded HR" if checked else "PSD peak"
+        log.info("PSD metrics reference switched to %s", mode)
 
     def update_psd_plot(
         self,
@@ -834,74 +959,144 @@ class HRPlotWindow(QtWidgets.QMainWindow):
         freqs_green2: np.ndarray,
         psd_green2: np.ndarray,
         hr_bpm: float,
-        metrics_green1: Dict[str, float],
-        metrics_green2: Dict[str, float],
+        hr_conf: float,
+        metrics_green1: Dict[str, Dict[str, object]],
+        metrics_green2: Dict[str, Dict[str, object]],
+        use_embedded_reference: bool,
     ) -> None:
         """Update PSD plot with new data and metrics."""
+
+        def _fmt(value: object, pattern: str, fallback: str = "N/A") -> str:
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                return fallback
+            return pattern.format(numeric) if np.isfinite(numeric) else fallback
+
         # Update curves
         if freqs_green1.size > 0:
             self.psd_curve_green1.setData(freqs_green1, psd_green1)
         if freqs_green2.size > 0:
             self.psd_curve_green2.setData(freqs_green2, psd_green2)
-        
-        # Update HR marker
-        f_hr = hr_bpm / 60.0 if hr_bpm > 0 else 0.0
-        if 0.3 <= f_hr <= 5.0:
-            self.psd_hr_line.setPos(f_hr)
-            self.psd_hr_line.setVisible(True)
-            
-            # Update tolerance region
-            self.psd_hr_region.setRegion([
-                f_hr - PSD_HR_TOLERANCE,
-                f_hr + PSD_HR_TOLERANCE
-            ])
-            self.psd_hr_region.setVisible(True)
-        else:
-            self.psd_hr_line.setVisible(False)
-            self.psd_hr_region.setVisible(False)
-        
-        # Update metrics text
+
+        # Persist latest metrics for snapshot/export
+        self._latest_psd_metrics = {
+            "GREEN1": metrics_green1,
+            "GREEN2": metrics_green2,
+            "hr_bpm": hr_bpm,
+            "hr_conf": hr_conf,
+            "use_embedded_reference": use_embedded_reference,
+        }
+
         primary_channel = self.psd_channel_combo.currentText()
-        metrics = metrics_green1 if primary_channel == "GREEN1" else metrics_green2
-        
-        # Format metrics with color coding
-        snr = metrics["snr_db"]
-        if snr >= 10.0:
-            snr_color = "green"
-            snr_status = "GOOD"
-        elif snr >= 5.0:
-            snr_color = "orange"
-            snr_status = "WARN"
+        channel_metrics = metrics_green1 if primary_channel == "GREEN1" else metrics_green2
+        active_metrics = channel_metrics["active"]
+        peak_metrics = channel_metrics["peak"]
+
+        # Update PSD peak marker (solid line)
+        peak_freq = float(peak_metrics.get("peak_freq_hz", float("nan")))
+        peak_color = self.channel_colors.get(primary_channel, "#1f77b4")
+        self.psd_peak_line.setPen(pg.mkPen(color=peak_color, width=2))
+        if np.isfinite(peak_freq) and PSD_FREQ_MIN <= peak_freq <= PSD_FREQ_MAX:
+            self.psd_peak_line.setPos(peak_freq)
+            self.psd_peak_line.setVisible(True)
         else:
-            snr_color = "red"
-            snr_status = "POOR"
-        
-        metrics_lines = [
-            f"<b>{primary_channel} Metrics:</b>",
-            f"<span style='color: {snr_color};'>SNR@HR: {snr:.1f} dB ({snr_status})</span>",
-            f"Peak: {metrics['peak_freq_hz']:.2f} Hz ({metrics['peak_freq_bpm']:.0f} bpm)",
-            f"Noise floor: {metrics['noise_floor_db']:.1f} dB",
-            f"Peak width: {metrics['peak_width_hz']:.2f} Hz",
+            self.psd_peak_line.setVisible(False)
+
+        # Update embedded HR marker (dashed)
+        f_hr = hr_bpm / 60.0 if hr_bpm > 0 else float("nan")
+        if np.isfinite(f_hr) and PSD_FREQ_MIN <= f_hr <= PSD_FREQ_MAX:
+            self.psd_embedded_line.setPos(f_hr)
+            self.psd_embedded_line.setVisible(True)
+
+            freq_tol = float(peak_metrics.get("freq_tolerance_hz", PSD_PEAK_TOLERANCE_HZ))
+            freq_tol = max(freq_tol, PSD_PEAK_TOLERANCE_HZ)
+            self.psd_embedded_region.setRegion(
+                [
+                    max(PSD_FREQ_MIN, f_hr - freq_tol),
+                    min(PSD_FREQ_MAX, f_hr + freq_tol),
+                ]
+            )
+            self.psd_embedded_region.setVisible(True)
+        else:
+            self.psd_embedded_line.setVisible(False)
+            self.psd_embedded_region.setVisible(False)
+
+        # Compose metrics text
+        snr = float(active_metrics.get("snr_db", float("nan")))
+        snr_status = "N/A"
+        snr_color = "gray"
+        if np.isfinite(snr):
+            if snr >= 10.0:
+                snr_color, snr_status = "green", "GOOD"
+            elif snr >= 5.0:
+                snr_color, snr_status = "orange", "WARN"
+            else:
+                snr_color, snr_status = "red", "POOR"
+        snr_center = active_metrics.get("center_label", "peak")
+        snr_line = (
+            f"<span style='color: {snr_color};'>SNR ({snr_center}): "
+            f"{snr:.1f} dB ({snr_status})</span>"
+            if np.isfinite(snr)
+            else "<span style='color: gray;'>SNR: N/A (insufficient data)</span>"
+        )
+
+        peak_width = float(peak_metrics.get("peak_width_hz", float("nan")))
+        peak_prom = float(peak_metrics.get("peak_prom_db", float("nan")))
+        noise_floor = float(active_metrics.get("noise_floor_db", peak_metrics.get("noise_floor_db", float("nan"))))
+        delta_f = float(peak_metrics.get("delta_f_hz", float("nan")))
+        signal_bw = float(active_metrics.get("signal_bandwidth_hz", float("nan")))
+
+        hardware_lines = [
+            f"<b>{primary_channel} Hardware Metrics ({'embedded HR' if use_embedded_reference else 'PSD peak'})</b>",
+            f"Peak HR: {_fmt(peak_metrics.get('peak_bpm', float('nan')), '{:.1f}')} bpm "
+            f"({_fmt(peak_freq, '{:.2f}')} Hz)",
+            f"Peak power: {_fmt(peak_metrics.get('peak_power_db', float('nan')), '{:.1f}')} dB/Hz",
+            f"Peak width: {_fmt(peak_width, '{:.2f}')} Hz",
+            f"Peak prominence: {_fmt(peak_prom, '{:.1f}')} dB",
+            snr_line,
+            f"Noise floor: {_fmt(noise_floor, '{:.1f}')} dB/Hz",
+            f"Signal bandwidth: {_fmt(signal_bw, '{:.2f}')} Hz",
+            f"Δf: {_fmt(delta_f, '{:.3f}')} Hz | fs: {_fmt(active_metrics.get('fs_hz', float('nan')), '{:.1f}')} Hz",
         ]
-        
-        if metrics["hr_mismatch"]:
-            metrics_lines.append("<span style='color: red;'><b>⚠ MISMATCH</b></span>")
-        
-        if metrics["peak_width_hz"] > 0.4:
-            metrics_lines.append("<span style='color: orange;'><b>⚠ BROAD PEAK</b></span>")
-        
-        metrics_html = "<br>".join(metrics_lines)
+
+        mismatch_flag = bool(peak_metrics.get("mismatch", False))
+        mismatch_reason = peak_metrics.get("mismatch_reason", "")
+        mismatch_diff = float(peak_metrics.get("mismatch_bpm_diff", float("nan")))
+        tolerance_bpm = float(peak_metrics.get("tolerance_bpm", float("nan")))
+
+        mismatch_text = (
+            f"<span style='color: {'red' if mismatch_flag else 'green'};'>"
+            f"Mismatch: {mismatch_flag} "
+            f"(Δ={_fmt(mismatch_diff, '{:.1f}')} bpm, tol={_fmt(tolerance_bpm, '{:.1f}')} bpm)"
+            "</span>"
+        )
+        if mismatch_reason:
+            mismatch_text += f"<br><span style='color: gray;'>{mismatch_reason}</span>"
+
+        embedded_lines = [
+            "<b>Embedded Algorithm:</b>",
+            f"HR: {_fmt(hr_bpm, '{:.1f}')} bpm",
+            f"HR_Conf: {_fmt(hr_conf, '{:.0f}')}%",
+            mismatch_text,
+        ]
+
+        metrics_html = "<br>".join(hardware_lines + [""] + embedded_lines)
         self.psd_metrics_text.setHtml(metrics_html)
-        
+
         # Position metrics text in top-right corner
         (xmin, xmax), (ymin, ymax) = self.psd_plot.getViewBox().viewRange()
         x_pos = xmax - 0.02 * (xmax - xmin)
         y_pos = ymax - 0.02 * (ymax - ymin)
         self.psd_metrics_text.setPos(x_pos, y_pos)
-        
+
         # Auto-scale Y if not locked
         if not self.psd_lock_scale_checkbox.isChecked():
-            all_psd = np.concatenate([psd_green1, psd_green2]) if psd_green1.size > 0 and psd_green2.size > 0 else (psd_green1 if psd_green1.size > 0 else psd_green2)
+            all_psd = (
+                np.concatenate([psd_green1, psd_green2])
+                if psd_green1.size > 0 and psd_green2.size > 0
+                else (psd_green1 if psd_green1.size > 0 else psd_green2)
+            )
             if all_psd.size > 0:
                 ymin_data = float(np.min(all_psd))
                 ymax_data = float(np.max(all_psd))
@@ -915,16 +1110,73 @@ class HRPlotWindow(QtWidgets.QMainWindow):
         filename = f"psd_snapshot_{timestamp}.png"
         
         try:
+            if self._latest_psd_metrics is None:
+                log.warning("No PSD metrics available yet; snapshot aborted.")
+                return
+
             # Export the PSD plot
             exporter = pg.exporters.ImageExporter(self.psd_plot.scene())
             exporter.export(filename)
             log.info("Saved PSD snapshot to %s", filename)
-            
-            # Also log metrics to a text file
-            metrics_file = f"psd_metrics_{timestamp}.txt"
-            with open(metrics_file, "w") as f:
-                f.write(f"Timestamp: {timestamp}\n")
-                f.write(self.psd_metrics_text.toPlainText())
+
+            metrics_file = f"psd_metrics_{timestamp}.csv"
+            fieldnames = [
+                "channel",
+                "timestamp",
+                "reference_mode",
+                "peak_bpm",
+                "peak_power_dB",
+                "snr_dB",
+                "peak_width_Hz",
+                "peak_prom_dB",
+                "embedded_hr_bpm",
+                "embedded_hr_conf",
+                "mismatch_bool",
+                "mismatch_bpm_diff",
+                "fs_hz",
+                "nperseg",
+                "delta_f_hz",
+                "signal_bandwidth_hz",
+            ]
+
+            def _csv_value(value: object, precision: int = 3) -> str:
+                try:
+                    numeric = float(value)
+                except (TypeError, ValueError):
+                    return ""
+                if not np.isfinite(numeric):
+                    return ""
+                return f"{numeric:.{precision}f}"
+
+            with open(metrics_file, "w", newline="") as csv_file:
+                writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
+                writer.writeheader()
+                for channel in ("GREEN1", "GREEN2"):
+                    channel_metrics = self._latest_psd_metrics.get(channel)
+                    if not channel_metrics:
+                        continue
+                    active = channel_metrics["active"]
+                    peak = channel_metrics["peak"]
+                    writer.writerow(
+                        {
+                            "channel": channel,
+                            "timestamp": timestamp,
+                            "reference_mode": active.get("center_label", "peak"),
+                            "peak_bpm": _csv_value(peak.get("peak_bpm"), 2),
+                            "peak_power_dB": _csv_value(peak.get("peak_power_db"), 2),
+                            "snr_dB": _csv_value(active.get("snr_db"), 2),
+                            "peak_width_Hz": _csv_value(peak.get("peak_width_hz"), 3),
+                            "peak_prom_dB": _csv_value(peak.get("peak_prom_db"), 2),
+                            "embedded_hr_bpm": _csv_value(self._latest_psd_metrics.get("hr_bpm"), 2),
+                            "embedded_hr_conf": _csv_value(self._latest_psd_metrics.get("hr_conf"), 1),
+                            "mismatch_bool": str(bool(peak.get("mismatch", False))),
+                            "mismatch_bpm_diff": _csv_value(peak.get("mismatch_bpm_diff"), 2),
+                            "fs_hz": _csv_value(peak.get("fs_hz"), 2),
+                            "nperseg": _csv_value(peak.get("nperseg"), 0),
+                            "delta_f_hz": _csv_value(peak.get("delta_f_hz"), 4),
+                            "signal_bandwidth_hz": _csv_value(active.get("signal_bandwidth_hz"), 4),
+                        }
+                    )
             log.info("Saved PSD metrics to %s", metrics_file)
         except Exception as exc:
             log.error("Failed to save snapshot: %s", exc)
@@ -1052,32 +1304,101 @@ class HRPlotController(QtCore.QObject):
         if time_data.size < 100:  # Need sufficient data
             return
         
-        # Calculate effective sample rate
-        if time_data[-1] > time_data[0]:
-            sample_rate = time_data.size / (time_data[-1] - time_data[0])
-        else:
+        # Calculate effective sample rate using median spacing for robustness
+        diffs = np.diff(time_data)
+        valid_diffs = diffs[diffs > 0]
+        if valid_diffs.size == 0:
             return
+        median_dt = float(np.median(valid_diffs))
+        if not np.isfinite(median_dt) or median_dt <= 0:
+            return
+        sample_rate = 1.0 / median_dt
         
         # Get current HR
         hr_bpm = float(windowed["HR"][-1]) if windowed["HR"].size > 0 else 0.0
+        hr_conf = float(windowed["HR_Conf"][-1]) if windowed["HR_Conf"].size > 0 else 0.0
         
+        use_embedded_reference = self.window.use_embedded_hr_metrics()
+
         # Compute PSD for GREEN1
-        freqs_green1, psd_green1 = compute_psd(time_data, windowed["GREEN1"], sample_rate)
-        metrics_green1 = compute_psd_metrics(freqs_green1, psd_green1, hr_bpm)
-        
+        freqs_green1, psd_linear_green1, psd_db_green1, nperseg_green1 = compute_psd(
+            time_data,
+            windowed["GREEN1"],
+            sample_rate,
+        )
+        metrics_green1_peak = compute_psd_metrics(
+            freqs_green1,
+            psd_linear_green1,
+            psd_db_green1,
+            sample_rate,
+            nperseg_green1,
+            hr_bpm,
+            hr_conf,
+            use_embedded_reference=False,
+        )
+        metrics_green1_active = (
+            compute_psd_metrics(
+                freqs_green1,
+                psd_linear_green1,
+                psd_db_green1,
+                sample_rate,
+                nperseg_green1,
+                hr_bpm,
+                hr_conf,
+                use_embedded_reference=True,
+            )
+            if use_embedded_reference
+            else metrics_green1_peak
+        )
+
         # Compute PSD for GREEN2
-        freqs_green2, psd_green2 = compute_psd(time_data, windowed["GREEN2"], sample_rate)
-        metrics_green2 = compute_psd_metrics(freqs_green2, psd_green2, hr_bpm)
-        
+        freqs_green2, psd_linear_green2, psd_db_green2, nperseg_green2 = compute_psd(
+            time_data,
+            windowed["GREEN2"],
+            sample_rate,
+        )
+        metrics_green2_peak = compute_psd_metrics(
+            freqs_green2,
+            psd_linear_green2,
+            psd_db_green2,
+            sample_rate,
+            nperseg_green2,
+            hr_bpm,
+            hr_conf,
+            use_embedded_reference=False,
+        )
+        metrics_green2_active = (
+            compute_psd_metrics(
+                freqs_green2,
+                psd_linear_green2,
+                psd_db_green2,
+                sample_rate,
+                nperseg_green2,
+                hr_bpm,
+                hr_conf,
+                use_embedded_reference=True,
+            )
+            if use_embedded_reference
+            else metrics_green2_peak
+        )
+
         # Update the plot
         self.window.update_psd_plot(
             freqs_green1,
-            psd_green1,
+            psd_db_green1,
             freqs_green2,
-            psd_green2,
+            psd_db_green2,
             hr_bpm,
-            metrics_green1,
-            metrics_green2,
+            hr_conf,
+            {
+                "active": metrics_green1_active,
+                "peak": metrics_green1_peak,
+            },
+            {
+                "active": metrics_green2_active,
+                "peak": metrics_green2_peak,
+            },
+            use_embedded_reference,
         )
 
     def _autoscale_ppg(self, data: np.ndarray, plot: pg.PlotItem) -> None:
