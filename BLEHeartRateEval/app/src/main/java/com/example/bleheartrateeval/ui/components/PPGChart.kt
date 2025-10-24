@@ -4,7 +4,6 @@ import android.content.Context
 import android.graphics.Color
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
@@ -15,11 +14,16 @@ import com.example.bleheartrateeval.data.model.Record
 import com.github.mikephil.charting.charts.LineChart
 import com.github.mikephil.charting.components.Legend
 import com.github.mikephil.charting.components.XAxis
-import com.github.mikephil.charting.components.YAxis
 import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
+
+private const val PPG_WINDOW_MS = 20_000L
+private const val PPG_VISIBLE_SECONDS = 20f
+private const val PPG_UPDATE_INTERVAL_MS = 100L
+private const val PPG_MIN_SPAN = 100f
+private const val PPG_PADDING_SCALE = 1.1f
 
 @Composable
 fun PPGChart(modifier: Modifier = Modifier, data: List<Record>) {
@@ -65,24 +69,26 @@ private fun updateSinglePPGChart(chart: LineChart, data: List<Record>, signalNam
         return
     }
 
-    // Filter to last 20 seconds of data for better performance
-    val currentTime = data.lastOrNull()?.timestamp ?: 0L
-    val filteredData = data.filter { (currentTime - it.timestamp) <= 20000 }
-    
-    if (filteredData.isEmpty()) {
+    if (chart.shouldThrottle(PPG_UPDATE_INTERVAL_MS)) {
+        return
+    }
+
+    val windowData = data.windowRecent(PPG_WINDOW_MS)
+
+    if (windowData.isEmpty()) {
         chart.clear()
         chart.invalidate()
         return
     }
 
-    val entries = mutableListOf<Entry>()
-    val startTime = filteredData.first().timestamp
+    val entries = ArrayList<Entry>(windowData.size)
+    val startTime = windowData.first().timestamp
 
-    filteredData.forEach { r ->
+    windowData.forEach { r ->
         val x = (r.timestamp - startTime) / 1000f
         
         // Extract signal from extras (remove unit if present)
-        r.extras[signalName]?.split(" ")?.firstOrNull()?.toFloatOrNull()?.let {
+        r.extras[signalName]?.substringBefore(' ')?.toFloatOrNull()?.let {
             entries.add(Entry(x, it))
         }
     }
@@ -105,15 +111,17 @@ private fun updateSinglePPGChart(chart: LineChart, data: List<Record>, signalNam
 
     // Auto-scale and set X-axis window (20 seconds)
     val maxX = entries.maxOf { it.x }
-    val minX = 0f
-    chart.xAxis.axisMinimum = minX
-    chart.xAxis.axisMaximum = maxX.coerceAtLeast(20f)
-    chart.setVisibleXRangeMaximum(20f)
-    
-    // Auto-scale Y-axis
-    chart.axisLeft.resetAxisMinimum()
-    chart.axisLeft.resetAxisMaximum()
-    chart.fitScreen()
+    chart.xAxis.axisMinimum = 0f
+    chart.xAxis.axisMaximum = maxX.coerceAtLeast(PPG_VISIBLE_SECONDS)
+    chart.setVisibleXRangeMaximum(PPG_VISIBLE_SECONDS)
+
+    val minY = entries.minOf { it.y }
+    val maxY = entries.maxOf { it.y }
+    val span = (maxY - minY).coerceAtLeast(PPG_MIN_SPAN)
+    val halfSpan = span / 2f * PPG_PADDING_SCALE
+    val mid = (maxY + minY) / 2f
+    chart.axisLeft.axisMinimum = mid - halfSpan
+    chart.axisLeft.axisMaximum = mid + halfSpan
 
     chart.notifyDataSetChanged()
     chart.invalidate()

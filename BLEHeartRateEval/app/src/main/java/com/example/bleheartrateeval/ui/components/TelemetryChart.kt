@@ -2,13 +2,7 @@ package com.example.bleheartrateeval.ui.components
 
 import android.content.Context
 import android.graphics.Color
-import android.graphics.DashPathEffect
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.foundation.layout.Column
@@ -26,9 +20,6 @@ import com.github.mikephil.charting.data.Entry
 import com.github.mikephil.charting.data.LineData
 import com.github.mikephil.charting.data.LineDataSet
 import com.github.mikephil.charting.formatter.ValueFormatter
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 
 private val SKIN_CONTACT_LABELS = listOf(
@@ -45,6 +36,10 @@ private val ACTIVITY_LABELS = listOf(
     "Run",
     "Bike"
 )
+
+private const val TELEMETRY_WINDOW_MS = 20_000L
+private const val TELEMETRY_VISIBLE_SECONDS = 20f
+private const val TELEMETRY_UPDATE_INTERVAL_MS = 100L
 
 @Composable
 fun TelemetryChart(modifier: Modifier = Modifier, data: List<Record>) {
@@ -91,11 +86,22 @@ private fun updateHRConfidenceChart(chart: LineChart, data: List<Record>) {
         return
     }
 
-    val hrEntries = mutableListOf<Entry>()
-    val confEntries = mutableListOf<Entry>()
-    val startTime = data.first().timestamp
-    
-    data.forEach { r ->
+    if (chart.shouldThrottle(TELEMETRY_UPDATE_INTERVAL_MS)) {
+        return
+    }
+
+    val windowData = data.windowRecent(TELEMETRY_WINDOW_MS)
+    if (windowData.isEmpty()) {
+        chart.clear()
+        chart.invalidate()
+        return
+    }
+
+    val hrEntries = ArrayList<Entry>(windowData.size)
+    val confEntries = ArrayList<Entry>(windowData.size)
+    val startTime = windowData.first().timestamp
+
+    windowData.forEach { r ->
         val x = (r.timestamp - startTime) / 1000f
         r.hr?.let { hrEntries.add(Entry(x, it.toFloat())) }
         r.confidence?.let { confEntries.add(Entry(x, it)) }
@@ -107,10 +113,10 @@ private fun updateHRConfidenceChart(chart: LineChart, data: List<Record>) {
         return
     }
 
-    val dataSets = mutableListOf<LineDataSet>()
-    
+    val lineData = LineData()
+
     if (hrEntries.isNotEmpty()) {
-        dataSets.add(LineDataSet(hrEntries, "HR").apply {
+        lineData.addDataSet(LineDataSet(hrEntries, "HR").apply {
             axisDependency = YAxis.AxisDependency.LEFT
             color = Color.RED
             setDrawCircles(false)
@@ -121,7 +127,7 @@ private fun updateHRConfidenceChart(chart: LineChart, data: List<Record>) {
     }
     
     if (confEntries.isNotEmpty()) {
-        dataSets.add(LineDataSet(confEntries, "Confidence").apply {
+        lineData.addDataSet(LineDataSet(confEntries, "Confidence").apply {
             axisDependency = YAxis.AxisDependency.RIGHT
             color = Color.GREEN
             setDrawCircles(true)
@@ -133,7 +139,7 @@ private fun updateHRConfidenceChart(chart: LineChart, data: List<Record>) {
         })
     }
 
-    chart.data = LineData(dataSets as List<com.github.mikephil.charting.interfaces.datasets.ILineDataSet>)
+    chart.data = lineData
 
     // Set X-axis window (20 seconds)
     val allEntries = hrEntries + confEntries
@@ -141,8 +147,8 @@ private fun updateHRConfidenceChart(chart: LineChart, data: List<Record>) {
         val maxX = allEntries.maxOf { it.x }
         val minX = 0f
         chart.xAxis.axisMinimum = minX
-        chart.xAxis.axisMaximum = maxX.coerceAtLeast(20f)
-        chart.setVisibleXRangeMaximum(20f)
+        chart.xAxis.axisMaximum = maxX.coerceAtLeast(TELEMETRY_VISIBLE_SECONDS)
+        chart.setVisibleXRangeMaximum(TELEMETRY_VISIBLE_SECONDS)
     }
 
     chart.notifyDataSetChanged()
@@ -157,11 +163,22 @@ private fun updateActivityChart(chart: LineChart, data: List<Record>) {
         return
     }
 
-    val activityEntries = mutableListOf<Entry>()
-    val scEntries = mutableListOf<Entry>()
-    val startTime = data.first().timestamp
+    if (chart.shouldThrottle(TELEMETRY_UPDATE_INTERVAL_MS)) {
+        return
+    }
 
-    data.forEach { r ->
+    val windowData = data.windowRecent(TELEMETRY_WINDOW_MS)
+    if (windowData.isEmpty()) {
+        chart.clear()
+        chart.invalidate()
+        return
+    }
+
+    val activityEntries = ArrayList<Entry>(windowData.size)
+    val scEntries = ArrayList<Entry>(windowData.size)
+    val startTime = windowData.first().timestamp
+
+    windowData.forEach { r ->
         val x = (r.timestamp - startTime) / 1000f
         r.activity?.let { activityEntries.add(Entry(x, it.toFloat())) }
         r.skinContact?.let { scEntries.add(Entry(x, it.toFloat())) }
@@ -173,10 +190,10 @@ private fun updateActivityChart(chart: LineChart, data: List<Record>) {
         return
     }
 
-    val dataSets = mutableListOf<LineDataSet>()
+    val lineData = LineData()
 
     if (activityEntries.isNotEmpty()) {
-        dataSets.add(LineDataSet(activityEntries, "Activity").apply {
+        lineData.addDataSet(LineDataSet(activityEntries, "Activity").apply {
             color = Color.CYAN
             setDrawCircles(false)
             lineWidth = 2.5f
@@ -187,7 +204,7 @@ private fun updateActivityChart(chart: LineChart, data: List<Record>) {
     }
 
     if (scEntries.isNotEmpty()) {
-        dataSets.add(LineDataSet(scEntries, "Skin Contact").apply {
+        lineData.addDataSet(LineDataSet(scEntries, "Skin Contact").apply {
             color = Color.YELLOW
             setDrawCircles(false)
             lineWidth = 2.5f
@@ -197,7 +214,7 @@ private fun updateActivityChart(chart: LineChart, data: List<Record>) {
         })
     }
 
-    chart.data = LineData(dataSets as List<com.github.mikephil.charting.interfaces.datasets.ILineDataSet>)
+    chart.data = lineData
 
     // Set X-axis window (20 seconds)
     val allEntries = activityEntries + scEntries
@@ -205,8 +222,8 @@ private fun updateActivityChart(chart: LineChart, data: List<Record>) {
         val maxX = allEntries.maxOf { it.x }
         val minX = 0f
         chart.xAxis.axisMinimum = minX
-        chart.xAxis.axisMaximum = maxX.coerceAtLeast(20f)
-        chart.setVisibleXRangeMaximum(20f)
+        chart.xAxis.axisMaximum = maxX.coerceAtLeast(TELEMETRY_VISIBLE_SECONDS)
+        chart.setVisibleXRangeMaximum(TELEMETRY_VISIBLE_SECONDS)
     }
 
     chart.notifyDataSetChanged()
