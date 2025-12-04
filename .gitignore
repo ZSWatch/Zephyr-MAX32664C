@@ -2,17 +2,7 @@ build
 build*
 *.code-workspace
 *__pycache__*
-nrf/
-
-# Zephyr workspace
-/.west
-/bootloader
-/modules
-/tools
-/zephyr
 __pycache__
-/nrf
-/nrfxlib
-/test
 
+# IDE
 /.vscode

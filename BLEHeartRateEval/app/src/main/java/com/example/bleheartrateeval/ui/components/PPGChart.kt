@@ -21,9 +21,10 @@ import com.github.mikephil.charting.formatter.ValueFormatter
 
 private const val PPG_WINDOW_MS = 20_000L
 private const val PPG_VISIBLE_SECONDS = 20f
-private const val PPG_UPDATE_INTERVAL_MS = 100L
+private const val PPG_UPDATE_INTERVAL_MS = 200L
 private const val PPG_MIN_SPAN = 100f
 private const val PPG_PADDING_SCALE = 1.1f
+private const val PPG_MAX_POINTS = 600
 
 @Composable
 fun PPGChart(modifier: Modifier = Modifier, data: List<Record>) {
@@ -73,24 +74,31 @@ private fun updateSinglePPGChart(chart: LineChart, data: List<Record>, signalNam
         return
     }
 
-    val windowData = data.windowRecent(PPG_WINDOW_MS)
-
-    if (windowData.isEmpty()) {
+    val startIndex = data.windowStartIndex(PPG_WINDOW_MS)
+    if (startIndex < 0) {
         chart.clear()
         chart.invalidate()
         return
     }
 
-    val entries = ArrayList<Entry>(windowData.size)
-    val startTime = windowData.first().timestamp
+    val startTime = data[startIndex].timestamp
+    val lastIndex = data.lastIndex
+    val count = lastIndex - startIndex + 1
+    val step = ((count + PPG_MAX_POINTS - 1) / PPG_MAX_POINTS).coerceAtLeast(1)
 
-    windowData.forEach { r ->
-        val x = (r.timestamp - startTime) / 1000f
+    val entries = ArrayList<Entry>(minOf(count, PPG_MAX_POINTS))
+
+    var index = startIndex
+    while (index <= lastIndex) {
+        val record = data[index]
+        val x = (record.timestamp - startTime) / 1000f
         
-        // Extract signal from extras (remove unit if present)
-        r.extras[signalName]?.substringBefore(' ')?.toFloatOrNull()?.let {
+        record.extras[signalName]?.substringBefore(' ')?.toFloatOrNull()?.let {
             entries.add(Entry(x, it))
         }
+
+        if (index == lastIndex) break
+        index = (index + step).coerceAtMost(lastIndex)
     }
 
     if (entries.isEmpty()) {

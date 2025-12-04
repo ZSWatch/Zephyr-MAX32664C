@@ -1,0 +1,103 @@
+<html>
+<body>
+<pre>
+<h1>µVision Build Log</h1>
+<h2>Tool Versions:</h2>
+IDE-Version: µVision V5.28.0.0
+Copyright (C) 2019 ARM Ltd and ARM Germany GmbH. All rights reserved.
+License Information: Yagmur Gok bilkent Flex license: MDK Plus 5.28 (Flex) (mdk_plus) Support: Jun 2021
+ 
+Tool Versions:
+Toolchain:       MDK Plus 5.28 (Flex)  Version: 5.28.0.0
+Toolchain Path:  C:\Keil_v5\ARM\ARMCC\Bin
+C Compiler:      Armcc.exe V5.06 update 6 (build 750)
+Assembler:       Armasm.exe V5.06 update 6 (build 750)
+Linker/Locator:  ArmLink.exe V5.06 update 6 (build 750)
+Library Manager: ArmAr.exe V5.06 update 6 (build 750)
+Hex Converter:   FromElf.exe V5.06 update 6 (build 750)
+CPU DLL:         SARMCM3.DLL V5.28.0.0
+Dialog DLL:      DCM.DLL V1.17.3.0
+Target DLL:      CMSIS_AGDI.dll V1.31.18.0
+Dialog DLL:      TCM.DLL V1.36.2.0
+ 
+<h2>Project:</h2>
+C:\SampleHostCode_MAX32664C_30.13.12\keil_630_HSP3_SCD\project\keil_630.uvprojx
+Project File Date:  05/05/2020
+
+<h2>Output:</h2>
+*** Using Compiler 'V5.06 update 6 (build 750)', folder: 'C:\Keil_v5\ARM\ARMCC\Bin'
+Build target 'max32630'
+compiling main.c...
+..\app\main.c(383): warning:  #940-D: missing return statement at end of non-void function "get_hub_status" 
+  }											
+..\app\main.c(3222): warning:  #177-D: variable "stop"  was declared but never referenced
+      int stop = (repeated) ? 0 : 1;
+..\app\main.c(3230): warning:  #177-D: variable "stop"  was declared but never referenced
+  	  int stop = (repeated) ? 0 : 1;
+..\app\main.c(3606): warning:  #177-D: variable "reservedByte_1"  was declared but never referenced
+  												 uint8_t reservedByte_1         =  (databuf[ptr+46]); 
+..\app\main.c(3607): warning:  #177-D: variable "reservedByte_2"  was declared but never referenced
+  												 uint8_t reservedByte_2         =  (databuf[ptr+47]); 
+..\app\main.c(3608): warning:  #177-D: variable "reservedByte_3"  was declared but never referenced
+  												 uint8_t reservedByte_3         =  (databuf[ptr+48]); 
+..\app\main.c(3571): warning:  #550-D: variable "accelDataSamp"  was set but never used
+  											accel_mode1_data                accelDataSamp;
+..\app\main.c(3538): warning:  #177-D: variable "sensHubReportFifoThresh"  was declared but never referenced
+  	 const int sensHubReportFifoThresh      = 1;
+..\app\main.c(3636): warning:  #1294-D: Old-style function start_whrm_measurement
+  int start_whrm_measurement(reportPeriod_in40msSteps){
+..\app\main.c(3636): warning:  #1079-D: standard requires that parameter "reportPeriod_in40msSteps"  be given a type by a subsequent declaration ("int" assumed)
+  int start_whrm_measurement(reportPeriod_in40msSteps){
+..\app\main.c(3745): warning:  #177-D: variable "reservedByte_1"  was declared but never referenced
+  												 uint8_t reservedByte_1         =  (databuf[ptr+46]); 
+..\app\main.c(3746): warning:  #177-D: variable "reservedByte_2"  was declared but never referenced
+  												 uint8_t reservedByte_2         =  (databuf[ptr+47]); 
+..\app\main.c(3747): warning:  #177-D: variable "reservedByte_3"  was declared but never referenced
+  												 uint8_t reservedByte_3         =  (databuf[ptr+48]); 
+..\app\main.c(3710): warning:  #550-D: variable "accelDataSamp"  was set but never used
+  											accel_mode1_data                accelDataSamp;
+..\app\main.c(3890): warning:  #177-D: variable "reservedByte_1"  was declared but never referenced
+  												 uint8_t reservedByte_1         =  (databuf[ptr+46]); 
+..\app\main.c(3891): warning:  #177-D: variable "reservedByte_2"  was declared but never referenced
+  												 uint8_t reservedByte_2         =  (databuf[ptr+47]); 
+..\app\main.c(3892): warning:  #177-D: variable "reservedByte_3"  was declared but never referenced
+  												 uint8_t reservedByte_3         =  (databuf[ptr+48]); 
+..\app\main.c(3855): warning:  #550-D: variable "accelDataSamp"  was set but never used
+  											accel_mode1_data                accelDataSamp;
+..\app\main.c(3828): warning:  #177-D: variable "mesOutput"  was declared but never referenced
+  	mes_repor_t mesOutput;
+..\app\main.c(3918): warning:  #177-D: variable "sensHubReportFifoThresh"  was declared but never referenced
+  	 const int sensHubReportFifoThresh      = 1;
+..\app\main.c(3924): warning:  #177-D: variable "databuf"  was declared but never referenced
+  	 static uint8_t databuf[WHRMWSPO2_FRAME_SIZE * MAX_WHRMWSPO2_SAMPLE_COUNT + 1];
+..\app\main.c(3989): warning:  #177-D: variable "sensHubReportFifoThresh"  was declared but never referenced
+  	 const int sensHubReportFifoThresh      = 1;
+..\app\main.c(3995): warning:  #177-D: variable "databuf"  was declared but never referenced
+  	 static uint8_t databuf[WHRMWSPO2_FRAME_SIZE * MAX_WHRMWSPO2_SAMPLE_COUNT + 1];																				
+..\app\main.c(4075): warning:  #177-D: variable "databuf"  was declared but never referenced
+  	 static uint8_t databuf[WHRMWSPO2_FRAME_SIZE * MAX_WHRMWSPO2_SAMPLE_COUNT + 1];																				
+..\app\main.c(4131): warning:  #177-D: variable "prev_mfio_event_count"  was declared but never referenced
+  	static int prev_mfio_event_count = -1; 
+..\app\main.c(4132): warning:  #177-D: variable "no_event_counter"  was declared but never referenced
+  	static int no_event_counter = 0; 	
+..\app\main.c: 26 warnings, 0 errors
+linking...
+Program Size: Code=11676 RO-data=816 RW-data=72 ZI-data=17416  
+".\Objects\keil_630.axf" - 0 Error(s), 26 Warning(s).
+
+<h2>Software Packages used:</h2>
+
+Package Vendor: Maxim
+                http://www.mxim.net/microcontroller/pack/Maxim.MAX32630.0.0.1.pack
+                Maxim.MAX32630.0.0.1
+                Maxim Integrated MAX32630 and MAX32631 Series Device Support, Board Support Package and Examples
+
+<h2>Collection of Component include folders:</h2>
+  .\RTE\_max32630
+  C:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include
+
+<h2>Collection of Component Files used:</h2>
+Build Time Elapsed:  00:00:15
+</pre>
+</body>
+</html>

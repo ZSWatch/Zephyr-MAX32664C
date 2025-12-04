@@ -1,0 +1,15 @@
+.\objects\aes.o: ..\MAX3263XPeriphDriver\Source\aes.c
+.\objects\aes.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\aes.o: ..\MAX3263XPeriphDriver\Include\mxc_config.h
+.\objects\aes.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h
+.\objects\aes.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h
+.\objects\aes.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\aes.o: ..\CMSIS\Include\core_cm4.h
+.\objects\aes.o: ..\CMSIS\Include\core_cmInstr.h
+.\objects\aes.o: ..\CMSIS\Include\core_cmFunc.h
+.\objects\aes.o: ..\CMSIS\Include\core_cm4_simd.h
+.\objects\aes.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h
+.\objects\aes.o: ..\MAX3263XPeriphDriver\Include\mxc_errors.h
+.\objects\aes.o: ..\MAX3263XPeriphDriver\Include\aes.h
+.\objects\aes.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\aes_regs.h
+.\objects\aes.o: ..\MAX3263XPeriphDriver\Include\nvic_table.h

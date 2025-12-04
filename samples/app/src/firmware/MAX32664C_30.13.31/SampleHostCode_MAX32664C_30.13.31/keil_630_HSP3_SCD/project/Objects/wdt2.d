@@ -1,0 +1,16 @@
+.\objects\wdt2.o: ..\MAX3263XPeriphDriver\Source\wdt2.c
+.\objects\wdt2.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\wdt2.o: ..\MAX3263XPeriphDriver\Include\wdt2.h
+.\objects\wdt2.o: ..\MAX3263XPeriphDriver\Include\mxc_config.h
+.\objects\wdt2.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h
+.\objects\wdt2.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h
+.\objects\wdt2.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\wdt2.o: ..\CMSIS\Include\core_cm4.h
+.\objects\wdt2.o: ..\CMSIS\Include\core_cmInstr.h
+.\objects\wdt2.o: ..\CMSIS\Include\core_cmFunc.h
+.\objects\wdt2.o: ..\CMSIS\Include\core_cm4_simd.h
+.\objects\wdt2.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h
+.\objects\wdt2.o: ..\MAX3263XPeriphDriver\Include\mxc_errors.h
+.\objects\wdt2.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\wdt2_regs.h
+.\objects\wdt2.o: ..\MAX3263XPeriphDriver\Include\mxc_assert.h
+.\objects\wdt2.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\pwrseq_regs.h

@@ -1,0 +1,17 @@
+.\objects\pmu.o: ..\MAX3263XPeriphDriver\Source\pmu.c
+.\objects\pmu.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdio.h
+.\objects\pmu.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\pmu.o: ..\MAX3263XPeriphDriver\Include\mxc_config.h
+.\objects\pmu.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h
+.\objects\pmu.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h
+.\objects\pmu.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\pmu.o: ..\CMSIS\Include\core_cm4.h
+.\objects\pmu.o: ..\CMSIS\Include\core_cmInstr.h
+.\objects\pmu.o: ..\CMSIS\Include\core_cmFunc.h
+.\objects\pmu.o: ..\CMSIS\Include\core_cm4_simd.h
+.\objects\pmu.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h
+.\objects\pmu.o: ..\MAX3263XPeriphDriver\Include\mxc_errors.h
+.\objects\pmu.o: ..\MAX3263XPeriphDriver\Include\mxc_assert.h
+.\objects\pmu.o: ..\MAX3263XPeriphDriver\Include\pmu.h
+.\objects\pmu.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\pmu_regs.h
+.\objects\pmu.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h

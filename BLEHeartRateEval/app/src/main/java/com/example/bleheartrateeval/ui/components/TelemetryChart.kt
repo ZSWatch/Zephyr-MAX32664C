@@ -39,7 +39,8 @@ private val ACTIVITY_LABELS = listOf(
 
 private const val TELEMETRY_WINDOW_MS = 20_000L
 private const val TELEMETRY_VISIBLE_SECONDS = 20f
-private const val TELEMETRY_UPDATE_INTERVAL_MS = 100L
+private const val TELEMETRY_UPDATE_INTERVAL_MS = 200L
+private const val TELEMETRY_MAX_POINTS = 500
 
 @Composable
 fun TelemetryChart(modifier: Modifier = Modifier, data: List<Record>) {
@@ -90,21 +91,30 @@ private fun updateHRConfidenceChart(chart: LineChart, data: List<Record>) {
         return
     }
 
-    val windowData = data.windowRecent(TELEMETRY_WINDOW_MS)
-    if (windowData.isEmpty()) {
+    val startIndex = data.windowStartIndex(TELEMETRY_WINDOW_MS)
+    if (startIndex < 0) {
         chart.clear()
         chart.invalidate()
         return
     }
 
-    val hrEntries = ArrayList<Entry>(windowData.size)
-    val confEntries = ArrayList<Entry>(windowData.size)
-    val startTime = windowData.first().timestamp
+    val startTime = data[startIndex].timestamp
+    val lastIndex = data.lastIndex
+    val count = lastIndex - startIndex + 1
+    val step = ((count + TELEMETRY_MAX_POINTS - 1) / TELEMETRY_MAX_POINTS).coerceAtLeast(1)
 
-    windowData.forEach { r ->
-        val x = (r.timestamp - startTime) / 1000f
-        r.hr?.let { hrEntries.add(Entry(x, it.toFloat())) }
-        r.confidence?.let { confEntries.add(Entry(x, it)) }
+    val hrEntries = ArrayList<Entry>(minOf(count, TELEMETRY_MAX_POINTS))
+    val confEntries = ArrayList<Entry>(minOf(count, TELEMETRY_MAX_POINTS))
+
+    var index = startIndex
+    while (index <= lastIndex) {
+        val record = data[index]
+        val x = (record.timestamp - startTime) / 1000f
+        record.hr?.let { hrEntries.add(Entry(x, it.toFloat())) }
+        record.confidence?.let { confEntries.add(Entry(x, it)) }
+
+        if (index == lastIndex) break
+        index = (index + step).coerceAtMost(lastIndex)
     }
 
     if (hrEntries.isEmpty() && confEntries.isEmpty()) {
@@ -167,21 +177,30 @@ private fun updateActivityChart(chart: LineChart, data: List<Record>) {
         return
     }
 
-    val windowData = data.windowRecent(TELEMETRY_WINDOW_MS)
-    if (windowData.isEmpty()) {
+    val startIndex = data.windowStartIndex(TELEMETRY_WINDOW_MS)
+    if (startIndex < 0) {
         chart.clear()
         chart.invalidate()
         return
     }
 
-    val activityEntries = ArrayList<Entry>(windowData.size)
-    val scEntries = ArrayList<Entry>(windowData.size)
-    val startTime = windowData.first().timestamp
+    val startTime = data[startIndex].timestamp
+    val lastIndex = data.lastIndex
+    val count = lastIndex - startIndex + 1
+    val step = ((count + TELEMETRY_MAX_POINTS - 1) / TELEMETRY_MAX_POINTS).coerceAtLeast(1)
 
-    windowData.forEach { r ->
-        val x = (r.timestamp - startTime) / 1000f
-        r.activity?.let { activityEntries.add(Entry(x, it.toFloat())) }
-        r.skinContact?.let { scEntries.add(Entry(x, it.toFloat())) }
+    val activityEntries = ArrayList<Entry>(minOf(count, TELEMETRY_MAX_POINTS))
+    val scEntries = ArrayList<Entry>(minOf(count, TELEMETRY_MAX_POINTS))
+
+    var index = startIndex
+    while (index <= lastIndex) {
+        val record = data[index]
+        val x = (record.timestamp - startTime) / 1000f
+        record.activity?.let { activityEntries.add(Entry(x, it.toFloat())) }
+        record.skinContact?.let { scEntries.add(Entry(x, it.toFloat())) }
+
+        if (index == lastIndex) break
+        index = (index + step).coerceAtMost(lastIndex)
     }
 
     if (activityEntries.isEmpty() && scEntries.isEmpty()) {

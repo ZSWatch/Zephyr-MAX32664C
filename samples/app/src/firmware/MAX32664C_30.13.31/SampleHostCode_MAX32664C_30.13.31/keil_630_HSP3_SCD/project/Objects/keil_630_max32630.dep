@@ -1,0 +1,967 @@
+Dependencies for Project 'keil_630', Target 'max32630': (DO NOT MODIFY !)
+F (..\app\main.c)(0x603DC760)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\main.o --omf_browse .\objects\main.crf --depend .\objects\main.d)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\i2cm.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\app\led.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\app\board.h)(0x5EAEE060)
+I (..\app\pb.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\tmr_utils.h)(0x5B50F832)
+I (..\app\max20303.h)(0x5EAEE3A2)
+I (..\MAX3263XPeriphDriver\Include\tmr.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\nvic_table.h)(0x5AAFCACE)
+I (..\MAX3263XPeriphDriver\Include\lp.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrman_regs.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrseq_regs.h)(0x56E2F64C)
+F (..\app\board.c)(0x5EAEE248)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\board.o --omf_browse .\objects\board.crf --depend .\objects\board.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\app\board.h)(0x5EAEE060)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\app\led.h)(0x5B50F838)
+I (..\app\pb.h)(0x5B50F838)
+I (..\app\max14690.h)(0x5B50F838)
+F (..\app\led.c)(0x5B50F832)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\led.o --omf_browse .\objects\led.crf --depend .\objects\led.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\app\led.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\app\board.h)(0x5EAEE060)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\app\pb.h)(0x5B50F838)
+F (..\app\pb.c)(0x5B50F832)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\pb.o --omf_browse .\objects\pb.crf --depend .\objects\pb.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\app\pb.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+F (..\app\stdio.c)(0x5B50F832)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\stdio.o --omf_browse .\objects\stdio.crf --depend .\objects\stdio.d)
+I (C:\Keil_v5\ARM\ARMCC\include\errno.h)(0x5CEBC034)
+I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stdlib.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\rt_misc.h)(0x5CEBC026)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\app\board.h)(0x5EAEE060)
+I (..\app\led.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\app\pb.h)(0x5B50F838)
+F (..\app\max20303.c)(0x5EAEE216)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\max20303.o --omf_browse .\objects\max20303.crf --depend .\objects\max20303.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stdbool.h)(0x5CEBC02E)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\i2cm.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\app\max20303.h)(0x5EAEE3A2)
+I (..\app\board.h)(0x5EAEE060)
+I (..\app\led.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\app\pb.h)(0x5B50F838)
+F (..\app\max14690.c)(0x5B50F832)(--c99 -c --cpu Cortex-M4.fp -D__EVAL -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Keil_v5\ARM\PACK\Maxim\MAX32630\0.2.7-a\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="523" -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\max14690.o --omf_browse .\objects\max14690.crf --depend .\objects\max14690.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x57F606B8)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E3045A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61101)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6A)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x57F606B8)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E486)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2CF)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B59)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B59)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F02)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F830)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30764)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E96)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61101)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF4)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F541)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F830)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F837)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F837)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F837)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F837)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F837)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F831)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F831)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F837)
+I (..\app\max14690.h)(0x5B50F836)
+I (..\app\board.h)(0x5C6D41A4)
+I (..\app\led.h)(0x5B50F836)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F830)
+I (..\app\pb.h)(0x5B50F836)
+I (..\MAX3263XPeriphDriver\Include\i2cm.h)(0x5B50F830)
+I (..\MAX3263XPeriphDriver\Include\lp.h)(0x58A60E96)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrman_regs.h)(0x56E3045A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrseq_regs.h)(0x56E3045A)
+F (..\MAX3263XPeriphDriver\Source\adc.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\adc.o --omf_browse .\objects\adc.crf --depend .\objects\adc.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\adc.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\adc_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\aes.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\aes.o --omf_browse .\objects\aes.crf --depend .\objects\aes.d)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\aes.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\aes_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\nvic_table.h)(0x5AAFCACE)
+F (..\MAX3263XPeriphDriver\Source\clkman.c)(0x57D2EEA2)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\clkman.o --omf_browse .\objects\clkman.crf --depend .\objects\clkman.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrseq_regs.h)(0x56E2F64C)
+F (..\MAX3263XPeriphDriver\Source\crc.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\crc.o --omf_browse .\objects\crc.crf --depend .\objects\crc.d)
+I (..\MAX3263XPeriphDriver\Include\crc.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\crc_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\flc.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\flc.o --omf_browse .\objects\flc.crf --depend .\objects\flc.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\flc.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\flc_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\gpio.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\gpio.o --omf_browse .\objects\gpio.crf --depend .\objects\gpio.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\i2cm.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\i2cm.o --omf_browse .\objects\i2cm.crf --depend .\objects\i2cm.d)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_lock.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\i2cm.h)(0x5B50F832)
+F (..\MAX3263XPeriphDriver\Source\i2cs.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\i2cs.o --omf_browse .\objects\i2cs.crf --depend .\objects\i2cs.d)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\i2cs.h)(0x5B50F832)
+F (..\MAX3263XPeriphDriver\Source\icc.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\icc.o --omf_browse .\objects\icc.crf --depend .\objects\icc.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\icc.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\icc_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\ioman.c)(0x57212062)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\ioman.o --omf_browse .\objects\ioman.crf --depend .\objects\ioman.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+F (..\MAX3263XPeriphDriver\Source\lp.c)(0x5B33BBA6)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\lp.o --omf_browse .\objects\lp.crf --depend .\objects\lp.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\lp.h)(0x58A60E98)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrman_regs.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrseq_regs.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+F (..\MAX3263XPeriphDriver\Source\maa.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\maa.o --omf_browse .\objects\maa.crf --depend .\objects\maa.d)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_lock.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\maa.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\maa_regs.h)(0x5B50F83A)
+F (..\MAX3263XPeriphDriver\Source\mxc_assert.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\mxc_assert.o --omf_browse .\objects\mxc_assert.crf --depend .\objects\mxc_assert.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+F (..\MAX3263XPeriphDriver\Source\mxc_lock.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\mxc_lock.o --omf_browse .\objects\mxc_lock.crf --depend .\objects\mxc_lock.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_lock.h)(0x5B50F832)
+F (..\MAX3263XPeriphDriver\Source\mxc_sys.c)(0x5BC30766)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\mxc_sys.o --omf_browse .\objects\mxc_sys.crf --depend .\objects\mxc_sys.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrseq_regs.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrman_regs.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spix_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\trim_regs.h)(0x5727C390)
+F (..\MAX3263XPeriphDriver\Source\nvic_table.c)(0x5AAFCAFE)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\nvic_table.o --omf_browse .\objects\nvic_table.crf --depend .\objects\nvic_table.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\nvic_table.h)(0x5AAFCACE)
+F (..\MAX3263XPeriphDriver\Source\owm.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\owm.o --omf_browse .\objects\owm.crf --depend .\objects\owm.d)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\owm.h)(0x5B50F832)
+F (..\MAX3263XPeriphDriver\Source\pmu.c)(0x5BC308B6)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\pmu.o --omf_browse .\objects\pmu.crf --depend .\objects\pmu.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\pmu.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pmu_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+F (..\MAX3263XPeriphDriver\Source\prng.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\prng.o --omf_browse .\objects\prng.crf --depend .\objects\prng.d)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\prng.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\prng_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\pt.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\pt.o --omf_browse .\objects\pt.crf --depend .\objects\pt.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\pt.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\rtc.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\rtc.o --omf_browse .\objects\rtc.crf --depend .\objects\rtc.d)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\rtc.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\rtc_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\spim.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\spim.o --omf_browse .\objects\spim.crf --depend .\objects\spim.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\mxc_lock.h)(0x5B50F832)
+F (..\MAX3263XPeriphDriver\Source\spis.c)(0x5B50F832)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\spis.o --omf_browse .\objects\spis.crf --depend .\objects\spis.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_lock.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\spis.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spis_regs.h)(0x59316EB8)
+F (..\MAX3263XPeriphDriver\Source\spix.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\spix.o --omf_browse .\objects\spix.crf --depend .\objects\spix.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\spix.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spix_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\tmr.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\tmr.o --omf_browse .\objects\tmr.crf --depend .\objects\tmr.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\tmr.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\tmr_utils.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\tmr_utils.o --omf_browse .\objects\tmr_utils.crf --depend .\objects\tmr_utils.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\tmr.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+I (..\MAX3263XPeriphDriver\Include\tmr_utils.h)(0x5B50F832)
+F (..\MAX3263XPeriphDriver\Source\uart.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\uart.o --omf_browse .\objects\uart.crf --depend .\objects\uart.d)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_lock.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\wdt.c)(0x5B50F830)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\wdt.o --omf_browse .\objects\wdt.crf --depend .\objects\wdt.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\wdt.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_sys.h)(0x5BC30766)
+I (..\MAX3263XPeriphDriver\Include\clkman.h)(0x58A60E98)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\MAX3263XPeriphDriver\Include\ioman.h)(0x59EF6BF6)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\ioman_regs.h)(0x58A5F542)
+I (..\MAX3263XPeriphDriver\Include\gpio.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cm_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\i2cs_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\tmr_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pt_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\owm_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\uart.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\uart_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\spim.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\spim_regs.h)(0x5B50F838)
+F (..\MAX3263XPeriphDriver\Source\wdt2.c)(0x5B50F832)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\wdt2.o --omf_browse .\objects\wdt2.crf --depend .\objects\wdt2.d)
+I (C:\Keil_v5\ARM\ARMCC\include\stddef.h)(0x5CEBC032)
+I (..\MAX3263XPeriphDriver\Include\wdt2.h)(0x5B50F832)
+I (..\MAX3263XPeriphDriver\Include\mxc_config.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\MAX3263XPeriphDriver\Include\mxc_errors.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\wdt2_regs.h)(0x5B50F83A)
+I (..\MAX3263XPeriphDriver\Include\mxc_assert.h)(0x5B50F832)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrseq_regs.h)(0x56E2F64C)
+F (..\CMSIS\Device\Maxim\MAX3263X\Source\system_max3263x.c)(0x58B7207C)(--c99 -c --cpu Cortex-M4.fp -D__MICROLIB -g -O0 --apcs=interwork --split_sections -I ..\app -I ..\MAX3263XPeriphDriver\Include -I ..\CMSIS\Include -I ..\CMSIS\Device\Maxim\MAX3263X\Include-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include-D__UVISION_VERSION="528" -DMAX32630 -DTARGET="MAX3263x" -DMXC_ASSERT_ENABLE -DTARGET_REV="0x4132" -DBOARD="EvKit_V1"-o .\objects\system_max3263x.o --omf_browse .\objects\system_max3263x.crf --depend .\objects\system_max3263x.d)
+I (C:\Keil_v5\ARM\ARMCC\include\string.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stdio.h)(0x5CEBC032)
+I (C:\Keil_v5\ARM\ARMCC\include\stdlib.h)(0x5CEBC032)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h)(0x5AAFCA6C)
+I (C:\Keil_v5\ARM\ARMCC\include\stdint.h)(0x5CEBC032)
+I (..\CMSIS\Include\core_cm4.h)(0x5540E488)
+I (..\CMSIS\Include\core_cmInstr.h)(0x5363E2D0)
+I (..\CMSIS\Include\core_cmFunc.h)(0x5B229B5A)
+I (..\CMSIS\Include\core_cm4_simd.h)(0x5B229B5A)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h)(0x5A663F04)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\clkman_regs.h)(0x58A61102)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\adc_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrseq_regs.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\pwrman_regs.h)(0x56E2F64C)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\icc_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\flc_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\rtc_regs.h)(0x5B50F838)
+I (..\CMSIS\Device\Maxim\MAX3263X\Include\trim_regs.h)(0x5727C390)
+F (..\CMSIS\Device\Maxim\MAX3263X\Source\ARM\startup_max3263x.s)(0x58B77324)(--cpu Cortex-M4.fp -g --apcs=interwork --pd "__MICROLIB SETA 1"-I.\RTE\_max32630-IC:\Users\mehmet.gok\AppData\Local\Arm\Packs\Maxim\MAX32630\0.0.1\Libraries\Device\Maxim\MAX3263X\Include-IC:\Keil_v5\ARM\CMSIS\Include--pd "__UVISION_VERSION SETA 528" --pd "MAX32630 SETA 1"--list .\listings\startup_max3263x.lst --xref -o .\objects\startup_max3263x.o --depend .\objects\startup_max3263x.d)

@@ -1,0 +1,13 @@
+.\objects\flc.o: ..\MAX3263XPeriphDriver\Source\flc.c
+.\objects\flc.o: ..\MAX3263XPeriphDriver\Include\mxc_config.h
+.\objects\flc.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h
+.\objects\flc.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h
+.\objects\flc.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\flc.o: ..\CMSIS\Include\core_cm4.h
+.\objects\flc.o: ..\CMSIS\Include\core_cmInstr.h
+.\objects\flc.o: ..\CMSIS\Include\core_cmFunc.h
+.\objects\flc.o: ..\CMSIS\Include\core_cm4_simd.h
+.\objects\flc.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h
+.\objects\flc.o: ..\MAX3263XPeriphDriver\Include\mxc_errors.h
+.\objects\flc.o: ..\MAX3263XPeriphDriver\Include\flc.h
+.\objects\flc.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\flc_regs.h

@@ -1,0 +1,13 @@
+.\objects\nvic_table.o: ..\MAX3263XPeriphDriver\Source\nvic_table.c
+.\objects\nvic_table.o: ..\MAX3263XPeriphDriver\Include\mxc_config.h
+.\objects\nvic_table.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h
+.\objects\nvic_table.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h
+.\objects\nvic_table.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\nvic_table.o: ..\CMSIS\Include\core_cm4.h
+.\objects\nvic_table.o: ..\CMSIS\Include\core_cmInstr.h
+.\objects\nvic_table.o: ..\CMSIS\Include\core_cmFunc.h
+.\objects\nvic_table.o: ..\CMSIS\Include\core_cm4_simd.h
+.\objects\nvic_table.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h
+.\objects\nvic_table.o: ..\MAX3263XPeriphDriver\Include\mxc_errors.h
+.\objects\nvic_table.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\string.h
+.\objects\nvic_table.o: ..\MAX3263XPeriphDriver\Include\nvic_table.h

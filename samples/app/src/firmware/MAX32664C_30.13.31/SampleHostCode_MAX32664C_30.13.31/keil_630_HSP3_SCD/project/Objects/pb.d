@@ -1,0 +1,16 @@
+.\objects\pb.o: ..\app\pb.c
+.\objects\pb.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stddef.h
+.\objects\pb.o: ..\MAX3263XPeriphDriver\Include\mxc_config.h
+.\objects\pb.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\mxc_device.h
+.\objects\pb.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\max3263x.h
+.\objects\pb.o: C:\Keil_v5\ARM\ARMCC\Bin\..\include\stdint.h
+.\objects\pb.o: ..\CMSIS\Include\core_cm4.h
+.\objects\pb.o: ..\CMSIS\Include\core_cmInstr.h
+.\objects\pb.o: ..\CMSIS\Include\core_cmFunc.h
+.\objects\pb.o: ..\CMSIS\Include\core_cm4_simd.h
+.\objects\pb.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\system_max3263x.h
+.\objects\pb.o: ..\MAX3263XPeriphDriver\Include\mxc_errors.h
+.\objects\pb.o: ..\MAX3263XPeriphDriver\Include\mxc_assert.h
+.\objects\pb.o: ..\app\pb.h
+.\objects\pb.o: ..\MAX3263XPeriphDriver\Include\gpio.h
+.\objects\pb.o: ..\CMSIS\Device\Maxim\MAX3263X\Include\gpio_regs.h

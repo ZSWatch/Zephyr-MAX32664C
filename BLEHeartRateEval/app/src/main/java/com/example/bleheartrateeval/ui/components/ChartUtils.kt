@@ -16,17 +16,13 @@ internal fun LineChart.shouldThrottle(minIntervalMs: Long): Boolean {
     return skipUpdate
 }
 
-internal fun List<Record>.windowRecent(windowMs: Long): List<Record> {
-    if (isEmpty()) return emptyList()
+internal fun List<Record>.windowStartIndex(windowMs: Long): Int {
+    if (isEmpty()) return -1
     val latestTimestamp = last().timestamp
-    val window = ArrayList<Record>()
-    for (i in indices.reversed()) {
-        val record = this[i]
-        if (latestTimestamp - record.timestamp > windowMs) {
-            break
-        }
-        window.add(record)
+    var index = size - 1
+    while (index >= 0 && latestTimestamp - this[index].timestamp <= windowMs) {
+        index--
     }
-    window.reverse()
-    return window
+    val candidate = index + 1
+    return if (candidate < size) candidate else size - 1
 }
