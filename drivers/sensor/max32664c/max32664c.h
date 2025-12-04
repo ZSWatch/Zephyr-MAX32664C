@@ -13,7 +13,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 
-#include "../max32664c.h"
+#include <zephyr/drivers/sensor/max32664c.h>
 
 #define MAX32664C_BIT_STATUS_NO_ERR   1
 #define MAX32664C_BIT_STATUS_DATA_RDY 3
