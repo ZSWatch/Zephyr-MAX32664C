@@ -66,7 +66,7 @@ int max32664c_init_interrupt(const struct device *dev)
 		return err;
 	}
 
-	data->interrupt_work.handler = max32664c_interrupt_worker;
+	k_work_init(&data->interrupt_work, max32664c_interrupt_worker);
 
 	tx[0] = 0xB8;
 	tx[1] = 0x01;

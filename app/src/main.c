@@ -155,7 +155,7 @@ static void hrs_notify(void)
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Y, &y);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_ACCEL_Z, &z);
 
-#if LOG_DATA_FOR_PLOTTING
+#ifdef LOG_DATA_FOR_PLOTTING
     // Output format:
     // GREEN1,<value>,;GREEN2,<value>,;IR1,<value>,;IR2,<value>,;RED1,<value>,;RED2,<value>,;X,<value>,;Y,<value>,;Z,<value>,
     LOG_PRINTK(
@@ -183,7 +183,7 @@ static void hrs_notify(void)
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION, &blood_oxygen);
 
         LOG_INF("HR: %u bpm (Confidence: %u)", hr.val1, hr.val2);
-        LOG_INF("SpO2: %u bpm (Confidence: %u)", blood_oxygen.val1, blood_oxygen.val2);
+        LOG_INF("SpO2: %u %% (Confidence: %u)", blood_oxygen.val1, sensor_max32664c_value_to_confidence(&blood_oxygen));
 
         if (hrf_ntf_enabled) {
             bt_hrs_notify(hr.val1);
@@ -202,7 +202,8 @@ static void hrs_notify(void)
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_SKIN_CONTACT, &skin_contact);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_ACTIVITY, &activity);
         sensor_channel_get(sensor_hub, SENSOR_CHAN_MAX32664C_BLOOD_OXYGEN_SATURATION, &blood_oxygen);
-#if LOG_DATA_FOR_PLOTTING
+
+#ifdef LOG_DATA_FOR_PLOTTING
         //   Output format
         //  HR,<value>,bpm;Conf,<value>;,RR,<value>;ms,SC,<value>;,Activity,<value>;,SpO2,<value>;%,Conf,<value>;,
         LOG_PRINTK("HR,%u,bpm;"
@@ -213,10 +214,10 @@ static void hrs_notify(void)
                 "Activity,%u,;"
                 "SpO2,%u,%%;"
                 "SpO2_Conf,%u;",
-            hr.val1, hr.val2, rr.val1, rr.val2, skin_contact.val1, activity.val1, blood_oxygen.val1, blood_oxygen.val2);    
+            hr.val1, hr.val2, rr.val1, rr.val2, skin_contact.val1, activity.val1, blood_oxygen.val1, blood_oxygen.val2);
 #else
         LOG_INF("HR: %u bpm (Confidence: %u)", hr.val1, hr.val2);
-        LOG_INF("SpO2: %u bpm (Confidence: %u)", blood_oxygen.val1, blood_oxygen.val2);
+        LOG_INF("SpO2: %u %% (Confidence: %u)", blood_oxygen.val1, sensor_max32664c_value_to_confidence(&blood_oxygen));
 #endif
 
         if (hrf_ntf_enabled) {
@@ -224,7 +225,7 @@ static void hrs_notify(void)
         }
     }
 
-#if LOG_DATA_FOR_PLOTTING
+#ifdef LOG_DATA_FOR_PLOTTING
     LOG_PRINTK("\n");
 #endif
 }
@@ -232,7 +233,7 @@ static void hrs_notify(void)
 static void mtu_exchange_cb(struct bt_conn *conn, uint8_t err,
 			    struct bt_gatt_exchange_params *params)
 {
-	printk("%s: MTU exchange %s (%u)\n", __func__,
+	LOG_INF("%s: MTU exchange %s (%u)\n", __func__,
 	       err == 0U ? "successful" : "failed",
 	       bt_gatt_get_mtu(conn));
 }
@@ -245,12 +246,12 @@ static int mtu_exchange(struct bt_conn *conn)
 {
 	int err;
 
-	printk("%s: Current MTU = %u\n", __func__, bt_gatt_get_mtu(conn));
+	LOG_INF("%s: Current MTU = %u\n", __func__, bt_gatt_get_mtu(conn));
+	LOG_INF("%s: Exchange MTU...\n", __func__);
 
-	printk("%s: Exchange MTU...\n", __func__);
 	err = bt_gatt_exchange_mtu(conn, &mtu_exchange_params);
 	if (err) {
-		printk("%s: MTU exchange failed (err %d)", __func__, err);
+		LOG_ERR("%s: MTU exchange failed (err %d)", __func__, err);
 	}
 
 	return err;

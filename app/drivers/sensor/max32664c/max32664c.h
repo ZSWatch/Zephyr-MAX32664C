@@ -4,6 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
+#ifndef MAX32664C_H_
+#define MAX32664C_H_
+
 #include <zephyr/pm/device.h>
 #include <zephyr/drivers/sensor.h>
 #include <zephyr/drivers/i2c.h>
@@ -140,9 +143,7 @@ struct max32664c_config {
 	struct gpio_dt_spec reset_gpio;
 
 #ifdef CONFIG_MAX32664C_USE_INTERRUPT
-	const struct device *dev;
-	struct gpio_callback gpio_cb;
-	struct k_work interrupt_work;
+	struct gpio_dt_spec int_gpio;
 #endif /* CONFIG_MAX32664C_USE_INTERRUPT */
 
 	struct gpio_dt_spec mfio_gpio;
@@ -178,8 +179,8 @@ struct max32664c_data {
 
 	uint32_t device_status;             /**< Current device status */
 
-	uint8_t motion_time;              /**< Motion time in milliseconds */
-	uint8_t motion_threshold;         /**< Motion threshold in milli-g */
+	uint16_t motion_time;             /**< Motion time in milliseconds */
+	uint16_t motion_threshold;        /**< Motion threshold in milli-g */
 	uint8_t led_current[3];           /**< LED current in mA */
 	uint8_t min_integration_time_idx;
 	uint8_t min_sampling_rate_idx;
@@ -194,6 +195,12 @@ struct max32664c_data {
 	struct k_thread thread;
 	k_tid_t thread_id;
 	bool is_thread_running;
+
+#ifdef CONFIG_MAX32664C_USE_INTERRUPT
+	const struct device *dev;
+	struct gpio_callback gpio_cb;
+	struct k_work interrupt_work;
+#endif /* CONFIG_MAX32664C_USE_INTERRUPT */
 
 #ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
 	/** @brief This buffer is used to read all available messages from the sensor hub plus the
@@ -236,14 +243,17 @@ struct max32664c_data {
 
 #ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
 	uint8_t ext_report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE *
-					(sizeof(struct max32664c_raw_report_t) +
-					 sizeof(struct max32664c_ext_report_t))];
+					sizeof(struct max32664c_ext_report_t)];
 #else
 	uint8_t report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE *
-				    (sizeof(struct max32664c_raw_report_t) +
-				     sizeof(struct max32664c_report_t))];
+				    sizeof(struct max32664c_report_t))];
 #endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
-#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY*/
+#endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
+
+#ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
+	uint8_t fw_init_vector[11];
+	uint8_t fw_auth_vector[16];
+#endif /* CONFIG_MAX32664C_USE_FIRMWARE_LOADER */
 };
 
 /** @brief          Enable / Disable the accelerometer.
@@ -278,10 +288,13 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx
  */
 int max32664c_init_hub(const struct device *dev);
 
-#if CONFIG_MAX32664C_USE_INTERRUPT
+#ifdef CONFIG_MAX32664C_USE_INTERRUPT
 /** @brief      Initialize the interrupt support for the sensor hub.
  *  @param dev  Pointer to device
  *  @return     0 when successful
  */
 int max32664c_init_interrupt(const struct device *dev);
+
 #endif /* CONFIG_MAX32664C_USE_INTERRUPT */
+
+#endif /* MAX32664C_H_ */

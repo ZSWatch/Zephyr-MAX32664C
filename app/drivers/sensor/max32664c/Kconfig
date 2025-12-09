@@ -12,6 +12,7 @@ config SENSOR_MAX32664C
 if SENSOR_MAX32664C
 config MAX32664C_USE_FIRMWARE_LOADER
 	bool "Use this option if you want to flash the sensor hub over the I2C firmware loader"
+	depends on GPIO
 
 config MAX32664C_USE_EXTERNAL_ACC
 	bool "Use this option if you want to use an external accelerometer"

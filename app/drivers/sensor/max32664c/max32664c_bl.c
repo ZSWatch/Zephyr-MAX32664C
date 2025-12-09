@@ -20,9 +20,6 @@
 #define MAX32664C_DEFAULT_CMD_DELAY_MS 10
 #define MAX32664C_PAGE_WRITE_DELAY_MS  680
 
-static uint8_t max32664c_fw_init_vector[11];
-static uint8_t max32664c_fw_auth_vector[16];
-
 LOG_MODULE_REGISTER(max32664_loader, CONFIG_SENSOR_LOG_LEVEL);
 
 /** @brief          Read / write bootloader data from / to the sensor hub.
@@ -186,9 +183,23 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
 	uint8_t rx_buf;
 	uint8_t tx_buf[18] = {0};
 	uint32_t page_offset;
+	struct max32664c_data *data = dev->data;
+
+	/* Validate minimum firmware size */
+	if (size < (0x4C + sizeof(data->fw_init_vector) + sizeof(data->fw_auth_vector))) {
+		LOG_ERR("Firmware size %u too small (min 0x4C bytes)", size);
+		return -EINVAL;
+	}
 
 	/* Get the number of pages from the firmware file (see User Guide page 53) */
 	uint8_t num_pages = firmware[0x44];
+
+	/* Validate total firmware size based on page count */
+	uint32_t required_size = 0x4C + (num_pages * MAX32664C_FW_UPDATE_WRITE_SIZE);
+	if (size < required_size) {
+		LOG_ERR("Firmware size %u insufficient for %u pages (need %u)", size, num_pages, required_size);
+		return -EINVAL;
+	}
 
 	LOG_INF("Loading firmware...");
 	LOG_INF("\tSize: %u", size);
@@ -210,14 +221,14 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
 
 	/* Get the initialization and authentication vectors from the firmware */
 	/* (see User Guide page 53) */
-	memcpy(max32664c_fw_init_vector, &firmware[0x28], sizeof(max32664c_fw_init_vector));
-	memcpy(max32664c_fw_auth_vector, &firmware[0x34], sizeof(max32664c_fw_auth_vector));
+	memcpy(data->fw_init_vector, &firmware[0x28], sizeof(data->fw_init_vector));
+	memcpy(data->fw_auth_vector, &firmware[0x34], sizeof(data->fw_auth_vector));
 
 	/* Write the initialization vector */
 	LOG_INF("\tWriting init vector...");
 	tx_buf[0] = 0x80;
 	tx_buf[1] = 0x00;
-	memcpy(&tx_buf[2], max32664c_fw_init_vector, sizeof(max32664c_fw_init_vector));
+	memcpy(&tx_buf[2], data->fw_init_vector, sizeof(data->fw_init_vector));
 	if (max32664c_bl_i2c_transmit(dev, tx_buf, 13, &rx_buf, 1)) {
 		return -EINVAL;
 	}
@@ -230,7 +241,7 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
 	LOG_INF("\tWriting auth vector...");
 	tx_buf[0] = 0x80;
 	tx_buf[1] = 0x01;
-	memcpy(&tx_buf[2], max32664c_fw_auth_vector, sizeof(max32664c_fw_auth_vector));
+	memcpy(&tx_buf[2], data->fw_auth_vector, sizeof(data->fw_auth_vector));
 	if (max32664c_bl_i2c_transmit(dev, tx_buf, 18, &rx_buf, 1)) {
 		return -EINVAL;
 	}

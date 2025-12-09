@@ -449,12 +449,14 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
 	if (k_msgq_alloc_init(&data->raw_report_queue, sizeof(struct max32664c_raw_report_t),
 			      CONFIG_MAX32664C_QUEUE_SIZE)) {
 		LOG_ERR("Failed to allocate RAW report queue!");
+		k_msgq_cleanup(&data->raw_report_queue);
 		return -ENOMEM;
 	}
 
 	if (!extended && k_msgq_alloc_init(&data->report_queue, sizeof(struct max32664c_report_t),
 					   CONFIG_MAX32664C_QUEUE_SIZE)) {
 		LOG_ERR("Failed to allocate report queue!");
+		k_msgq_cleanup(&data->raw_report_queue);
 		return -ENOMEM;
 	}
 
@@ -858,7 +860,7 @@ static int max32664c_attr_set(const struct device *dev, enum sensor_channel chan
 	case SENSOR_ATTR_MAX32664C_GENDER: {
 		tx[0] = 0x50;
 		tx[1] = 0x07;
-		tx[2] = 0x08;
+		tx[2] = 0x09;
 		tx[3] = val->val1 & 0x00FF;
 		if (max32664c_i2c_transmit(dev, tx, 4, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
 			LOG_ERR("Can not set gender!");

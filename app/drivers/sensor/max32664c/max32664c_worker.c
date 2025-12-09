@@ -6,8 +6,6 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-#include <zephyr/sys/byteorder.h>
-
 #include "max32664c.h"
 
 LOG_MODULE_REGISTER(maxim_max32664c_worker, CONFIG_SENSOR_LOG_LEVEL);
@@ -51,7 +49,7 @@ static int max32664c_get_fifo_count(const struct device *dev, uint8_t *fifo)
 
 	*fifo = rx[1];
 
-	return rx[0];
+	return 0;
 }
 
 /** @brief      Push a item into the message queue.
@@ -178,7 +176,7 @@ static void max32664c_parse_and_push_ext_report(const struct device *dev)
 	report.reserved[0] = data->max32664_i2c_buffer[79];
 	report.reserved[1] = data->max32664_i2c_buffer[80];
 
-	data->device_status |= report.sampling_rate_adj_flag & 0x01 |
+	data->device_status |= (report.sampling_rate_adj_flag & 0x01) |
 						   ((report.integration_time_adj_flag & 0x01) << 1);
 
 	max32664c_push_to_queue(&data->ext_report_queue, &report);
@@ -341,7 +339,6 @@ void max32664c_worker(const struct device *dev)
 #else
 		case MAX32664C_OP_MODE_ALGO_AEC:
 		case MAX32664C_OP_MODE_ALGO_AGC: {
-
 			/* Get all samples to clear the FIFO */
 			max32664c_i2c_transmit(
 				dev, tx, 2, data->max32664_i2c_buffer,
@@ -362,6 +359,8 @@ void max32664c_worker(const struct device *dev)
 #endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 		case MAX32664C_OP_MODE_SCD: {
 			/* Get all samples to clear the FIFO */
+			/* TODO: Implement SCD mode handling */
+			__fallthrough;
 		}
 		default: {
 			break;

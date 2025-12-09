@@ -8,12 +8,13 @@
 #define ZEPHYR_INCLUDE_DRIVERS_SENSOR_MAX32664C_H_
 
 #include <zephyr/device.h>
+#include <zephyr/drivers/sensor.h>
 
 /** @brief Converts a motion time in milli-seconds to the corresponding value for the MAX32664C
  * sensor. This macro should be used when configuring the motion based wake up settings for the
  * sensor.
  */
-#define MAX32664C_MOTION_TIME(ms) ((uint8_t)((ms * 25UL) / 1000))
+#define MAX32664C_MOTION_TIME(ms) ((uint8_t)(((ms * 25UL) + 500) / 1000))
 
 /** @brief Converts a motion threshold in milli-g (Acceleration) to the corresponding value for the
  * MAX32664C sensor. This macro should be used when configuring the motion based wake up settings
@@ -238,12 +239,12 @@ static inline uint8_t sensor_max32664c_value_to_motion_flag(const struct sensor_
 }
 
 /**
- * @brief Helper function for converting struct sensor_value to MAX32664C log signal quality flag.
+ * @brief Helper function for converting struct sensor_value to MAX32664C low signal quality flag.
  *
  * @param val A pointer to a sensor_value struct.
  * @return The converted value.
  */
-static inline uint8_t sensor_max32664c_value_to_log_signal_quality_flag(const struct sensor_value *val)
+static inline uint8_t sensor_max32664c_value_to_low_signal_quality_flag(const struct sensor_value *val)
 {
 	return (uint8_t)((val->val2 >> 21) & 0x01);
 }
