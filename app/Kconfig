@@ -1,9 +1,0 @@
-menu "Zephyr Kernel"
-    source "Kconfig.zephyr"
-endmenu
-
-menu "ZSWatch-MAX32664C"
-    menu "Custom drivers"
-        rsource "drivers/Kconfig"
-    endmenu
-endmenu

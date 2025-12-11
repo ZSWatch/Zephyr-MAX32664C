@@ -1,10 +1,13 @@
 manifest:
   self:
-    west-commands: scripts/west-commands.yml
+    path: max32664c
 
   remotes:
     - name: sdk
       url-base: https://github.com/nrfconnect
+
+  group-filter:
+    - -optional
 
   projects:
     - name: sdk-nrf
@@ -28,7 +31,5 @@ manifest:
           - edtt
           - trusted-firmware-m
           - sof
+          - matter
       clone-depth: 1
-
-  self:
-    west-commands: scripts/west-commands.yml

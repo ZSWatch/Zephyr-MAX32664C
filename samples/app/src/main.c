@@ -12,6 +12,8 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/gpio.h>
+
+#ifdef CONFIG_SENSOR_MAX32664C
 #include <zephyr/drivers/sensor.h>
 
 #include <zephyr/bluetooth/bluetooth.h>
@@ -23,10 +25,15 @@
 #include <zephyr/bluetooth/services/hrs.h>
 
 #include <zephyr/settings/settings.h>
+#include <zephyr/drivers/sensor/max32664c.h>
+#endif
 
-#include "sensor/max32664c.h"
+LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
-#define LOG_DATA_FOR_PLOTTING 0
+static const struct gpio_dt_spec led_en = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
+
+#ifdef CONFIG_SENSOR_MAX32664C
+#define LOG_DATA_FOR_PLOTTING 1
 
 #ifdef CONFIG_MAX32664C_USE_FIRMWARE_LOADER
 #define FW_VERSION_MAJOR 30
@@ -45,7 +52,6 @@ static void disconnected(struct bt_conn *conn, uint8_t reason);
 static void recycled(void);
 static int mtu_exchange(struct bt_conn *conn);
 
-static ATOMIC_DEFINE(state, 2U);
 static bool hrf_ntf_enabled;
 
 static const struct bt_data ad[] = {
@@ -71,7 +77,6 @@ struct bt_le_adv_param adv_param = {
 };
 
 static const struct device *const sensor_hub = DEVICE_DT_GET_OR_NULL(DT_ALIAS(sensor));
-static const struct gpio_dt_spec led_en = GPIO_DT_SPEC_GET(DT_ALIAS(led0), gpios);
 static const struct gpio_dt_spec led_green = GPIO_DT_SPEC_GET(DT_ALIAS(led1), gpios);
 static const struct gpio_dt_spec button = GPIO_DT_SPEC_GET(DT_ALIAS(sw0), gpios);
 static bool button_last_state = false;
@@ -81,8 +86,6 @@ BT_CONN_CB_DEFINE(conn_callbacks) = {
     .disconnected = disconnected,
     .recycled = recycled
 };
-
-LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
 
 void auth_cancel(struct bt_conn *conn)
 {
@@ -107,15 +110,12 @@ static void connected(struct bt_conn *conn, uint8_t err)
     } else {
         LOG_INF("Connected");
         mtu_exchange(conn);
-        atomic_set_bit(state, BLE_CONNECTED);
     }
 }
 
 static void disconnected(struct bt_conn *conn, uint8_t reason)
 {
     LOG_INF("Disconnected, reason 0x%02x %s", reason, bt_hci_err_to_str(reason));
-
-    atomic_set_bit(state, BLE_DISCONNECTED);
 }
 
 static void recycled(void)
@@ -267,9 +267,11 @@ static void check_button(void)
 
     button_last_state = current_state;
 }
+#endif /* CONFIG_SENSOR_MAX32664C */
 
 int main(void)
 {
+#ifdef CONFIG_SENSOR_MAX32664C
     int32_t err;
     struct sensor_value value;
 
@@ -278,12 +280,9 @@ int main(void)
     } else {
         LOG_INF("Sensor hub ready");
     }
+#endif
 
     if (!gpio_is_ready_dt(&led_en)) {
-        return 0;
-    }
-
-    if (!gpio_is_ready_dt(&led_green)) {
         return 0;
     }
 
@@ -291,11 +290,19 @@ int main(void)
         return 0;
     }
 
+    gpio_pin_set_dt(&led_en, 1);
+
+#ifndef CONFIG_SENSOR_MAX32664C
+    return 0;
+#else
+    if (!gpio_is_ready_dt(&led_green)) {
+        return 0;
+    }
+
     if (gpio_pin_configure_dt(&led_green, GPIO_OUTPUT_ACTIVE)) {
         return 0;
     }
 
-    gpio_pin_set_dt(&led_en, 1);
     gpio_pin_set_dt(&led_green, 0);
 
     // Configure button
@@ -364,7 +371,7 @@ int main(void)
 #else
     value.val1 = MAX32664C_OP_MODE_ALGO_AEC;
 #endif
-    value.val2 = MAX32664C_ALGO_MODE_CONT_HR_CONT_SPO2;
+    value.val2 = MAX32664C_ALGO_MODE_CONT_HRM;
     sensor_attr_set(sensor_hub, SENSOR_CHAN_MAX32664C_HEARTRATE, SENSOR_ATTR_MAX32664C_OP_MODE, &value);
 
     int i = 0;
@@ -385,14 +392,6 @@ int main(void)
         }
 #endif
 
-        if (atomic_test_bit(state, BLE_CONNECTED)) {
-            LOG_INF("Connected!");
-        }
-
-        if (atomic_test_and_clear_bit(state, BLE_CONNECTED)) {
-        } else if (atomic_test_and_clear_bit(state, BLE_DISCONNECTED)) {
-        }
-
         // Blink LED every 5 seconds (every 500 iterations)
         if (i % 500 == 0) {
             gpio_pin_toggle_dt(&led_green);
@@ -405,4 +404,5 @@ int main(void)
     }
 
     return 0;
+#endif /* CONFIG_SENSOR_MAX32664C */
 }

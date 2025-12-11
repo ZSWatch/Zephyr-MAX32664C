@@ -41,10 +41,13 @@
 		label = "Green LED 1";
 };
 
+&spi00 {
+	status = "disabled";	
+};
+
 &i2c30 {
 	status = "disabled";
 };
-
 
 &i2c20 {
 	compatible = "nordic,nrf-twim";
@@ -66,7 +69,9 @@
 		mfio-gpios = <&gpio2 1 GPIO_ACTIVE_HIGH>;
 		hr-config = [00 01];
 		spo2-config = [11 21];
-		led-current = [1F 1F 1F];
+		led-current = [3F 3F 3F];
+		min-sampling-rate = <400>;
+		max-sampling-rate = <400>;
 		use-max86141;
 	};
 };
