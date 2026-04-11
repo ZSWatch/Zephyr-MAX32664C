@@ -118,8 +118,9 @@ static int max32664c_bl_write_page(const struct device *dev, const uint8_t *data
 	/* Set the two command bytes */
 	tx_buf[0] = 0x80;
 	tx_buf[1] = 0x04;
-
-	if (i2c_write_dt(&config->i2c, tx_buf, MAX32664C_FW_UPDATE_WRITE_SIZE + 2)) {
+	err = i2c_write_dt(&config->i2c, tx_buf, MAX32664C_FW_UPDATE_WRITE_SIZE + 2);
+	if (err) {
+		LOG_ERR("I2C write error %d!", err);
 		err = -EINVAL;
 		goto max32664c_bl_write_page_exit;
 	};
@@ -211,6 +212,7 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
 	tx_buf[2] = 0x00;
 	tx_buf[3] = num_pages;
 	if (max32664c_bl_i2c_transmit(dev, tx_buf, 4, &rx_buf, 1)) {
+		LOG_WRN("Failed to set number of pages: %d", rx_buf);
 		return -EINVAL;
 	}
 
@@ -230,6 +232,7 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
 	tx_buf[1] = 0x00;
 	memcpy(&tx_buf[2], data->fw_init_vector, sizeof(data->fw_init_vector));
 	if (max32664c_bl_i2c_transmit(dev, tx_buf, 13, &rx_buf, 1)) {
+		LOG_WRN("Failed to set init vector: %d", rx_buf);
 		return -EINVAL;
 	}
 	if (rx_buf != 0) {
@@ -243,6 +246,7 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
 	tx_buf[1] = 0x01;
 	memcpy(&tx_buf[2], data->fw_auth_vector, sizeof(data->fw_auth_vector));
 	if (max32664c_bl_i2c_transmit(dev, tx_buf, 18, &rx_buf, 1)) {
+		LOG_WRN("Failed to set auth vector: %d", rx_buf);
 		return -EINVAL;
 	}
 	if (rx_buf != 0) {
@@ -253,6 +257,7 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
 	/* Remove the old app from the hub */
 	LOG_INF("\tRemove old app...");
 	if (max32664c_bl_erase_app(dev)) {
+		LOG_WRN("Failed to erase old app");
 		return -EINVAL;
 	}
 
@@ -260,13 +265,14 @@ static int max32664c_bl_load_fw(const struct device *dev, const uint8_t *firmwar
 	LOG_INF("\tWriting new firmware...");
 	page_offset = 0x4C;
 	for (uint8_t i = 0; i < num_pages; i++) {
-		uint8_t status;
+		int status;
 
 		LOG_INF("\t\tPage: %d of %d", (i + 1), num_pages);
 		LOG_INF("\t\tOffset: 0x%x", page_offset);
 		status = max32664c_bl_write_page(dev, firmware, page_offset);
-		LOG_INF("\t\tStatus: %u", status);
+		LOG_INF("\t\tStatus: %d", status);
 		if (status != 0) {
+			LOG_ERR("Failed to write page %d: %d", i, status);
 			return -EINVAL;
 		}
 
