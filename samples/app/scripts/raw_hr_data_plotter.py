@@ -1,17 +1,29 @@
 #!/usr/bin/env python3
 """
 Real-time plotter for heart rate sensor raw data (PPG and accelerometer).
-Streams data via RTT and renders with PyQtGraph for high-frequency updates.
+Streams data via RTT or UART and renders with PyQtGraph for high-frequency updates.
+
+Usage:
+    # RTT (default):
+    python3 raw_hr_data_plotter.py
+    JLINK_TARGET_DEVICE=NRF5340_XXAA python3 raw_hr_data_plotter.py
+
+    # UART:
+    python3 raw_hr_data_plotter.py --uart /dev/ttyUSB0
+    python3 raw_hr_data_plotter.py --uart /dev/ttyUSB0 --baud 1000000
 """
 
+import argparse
 import csv
 import logging
 import sys
 import time
 from typing import Dict, Optional
 
+import os
+
 import numpy as np
-import pylink
+import serial
 from scipy import signal
 
 try:
@@ -34,8 +46,8 @@ logging.basicConfig(
 log = logging.getLogger(__name__)
 
 # Configuration
-TARGET_DEVICE = "NRF54L15_M33"
-SERIAL_NUMBER = None
+TARGET_DEVICE = os.environ.get("JLINK_TARGET_DEVICE", "NRF54L15_M33")
+SERIAL_NUMBER = os.environ.get("JLINK_SERIAL", None)
 # Buffer size (fixed for numpy arrays). Should be >= WINDOW_SIZE * effective_sample_rate.
 MAX_POINTS = 40000
 WINDOW_SIZE = 20.0  # Display window in seconds (scrolls within MAX_POINTS)
@@ -91,6 +103,8 @@ buffers = {
 
 # Global variables
 jlink = None
+serial_port = None  # UART serial.Serial instance
+transport_mode = "rtt"  # "rtt" or "uart"
 start_time = None
 ts_start_ms: Optional[float] = None
 last_elapsed_time = 0.0
@@ -137,8 +151,9 @@ def parse_data_line(line: str) -> Optional[Dict[str, int]]:
 
 def init_jlink() -> None:
     """Initialize JLink connection and RTT."""
-    global jlink, start_time
+    global jlink, start_time, transport_mode
 
+    import pylink  # noqa: PLC0415 - lazy import, not needed for UART mode
     jlink = pylink.JLink()
     logging.getLogger("pylink.jlink").setLevel(logging.WARNING)
 
@@ -149,122 +164,161 @@ def init_jlink() -> None:
         jlink.open()
 
     log.info("Connecting to %s...", TARGET_DEVICE)
-    jlink.set_tif(pylink.enums.JLinkInterfaces.SWD)
+    jlink.set_tif(pylink.enums.JLinkInterfaces.SWD)  # type: ignore[union-attr]
     jlink.connect(TARGET_DEVICE)
     jlink.rtt_start(None)
 
+    transport_mode = "rtt"
     start_time = current_milli_time()
     log.info("RTT connection established. Starting data acquisition...")
 
 
-def read_rtt_data() -> int:
-    """Read data from RTT and parse it into the circular buffer."""
+def init_uart(port: str, baudrate: int = 115200) -> None:
+    """Initialize UART serial connection."""
+    global serial_port, start_time, transport_mode
+
+    log.info("Opening UART %s at %d baud...", port, baudrate)
+    serial_port = serial.Serial(port, baudrate, timeout=0)
+    transport_mode = "uart"
+    start_time = current_milli_time()
+    log.info("UART connection established. Starting data acquisition...")
+
+
+def _process_incoming_data(data: str) -> int:
+    """Process raw string data (from RTT or UART) into the circular buffer."""
     global line_buffer, sample_count, write_idx, ts_start_ms, last_elapsed_time
 
+    line_buffer += data
+    lines = line_buffer.split("\n")
+    line_buffer = lines[-1]  # keep incomplete line
+
+    new_samples = 0
+    for line in lines[:-1]:
+        parsed_data = parse_data_line(line)
+        if not parsed_data:
+            continue
+
+        if "TS" in parsed_data:
+            ts_value = float(parsed_data["TS"])
+            if ts_start_ms is None:
+                ts_start_ms = ts_value
+            elapsed_time = max(0.0, (ts_value - ts_start_ms) / 1000.0)
+        else:
+            elapsed_time = (current_milli_time() - start_time) / 1000.0
+        if write_idx > 0:
+            prev_time = last_elapsed_time
+            if elapsed_time <= prev_time:
+                elapsed_time = prev_time + (1.0 / max(1.0, SAMPLE_RATE))
+        last_elapsed_time = elapsed_time
+        idx = write_idx % MAX_POINTS
+        buffers["time"][idx] = elapsed_time
+        buffers["GREEN1"][idx] = parsed_data["GREEN1"]
+        buffers["IR1"][idx] = parsed_data["IR1"]
+        buffers["RED1"][idx] = parsed_data["RED1"]
+        buffers["GREEN2"][idx] = parsed_data["GREEN2"]
+        buffers["IR2"][idx] = parsed_data["IR2"]
+        buffers["RED2"][idx] = parsed_data["RED2"]
+        buffers["X"][idx] = parsed_data["X"]
+        buffers["Y"][idx] = parsed_data["Y"]
+        buffers["Z"][idx] = parsed_data["Z"]
+
+        # Only update HR/confidence fields if present (carry forward previous values)
+        if "HR" in parsed_data:
+            buffers["HR"][idx] = parsed_data["HR"]
+        elif write_idx > 0:
+            prev_idx = (write_idx - 1) % MAX_POINTS
+            buffers["HR"][idx] = buffers["HR"][prev_idx]
+
+        if "HR_Conf" in parsed_data:
+            buffers["HR_Conf"][idx] = parsed_data["HR_Conf"]
+        elif write_idx > 0:
+            prev_idx = (write_idx - 1) % MAX_POINTS
+            buffers["HR_Conf"][idx] = buffers["HR_Conf"][prev_idx]
+
+        if "RR" in parsed_data:
+            buffers["RR"][idx] = parsed_data["RR"]
+        elif write_idx > 0:
+            prev_idx = (write_idx - 1) % MAX_POINTS
+            buffers["RR"][idx] = buffers["RR"][prev_idx]
+
+        if "RR_Conf" in parsed_data:
+            buffers["RR_Conf"][idx] = parsed_data["RR_Conf"]
+        elif write_idx > 0:
+            prev_idx = (write_idx - 1) % MAX_POINTS
+            buffers["RR_Conf"][idx] = buffers["RR_Conf"][prev_idx]
+
+        if "SC" in parsed_data:
+            buffers["SC"][idx] = parsed_data["SC"]
+        elif write_idx > 0:
+            prev_idx = (write_idx - 1) % MAX_POINTS
+            buffers["SC"][idx] = buffers["SC"][prev_idx]
+
+        if "Activity" in parsed_data:
+            buffers["Activity"][idx] = parsed_data["Activity"]
+        elif write_idx > 0:
+            prev_idx = (write_idx - 1) % MAX_POINTS
+            buffers["Activity"][idx] = buffers["Activity"][prev_idx]
+
+        if "SpO2" in parsed_data:
+            buffers["SpO2"][idx] = parsed_data["SpO2"]
+        elif write_idx > 0:
+            prev_idx = (write_idx - 1) % MAX_POINTS
+            buffers["SpO2"][idx] = buffers["SpO2"][prev_idx]
+
+        if "SpO2_Conf" in parsed_data:
+            buffers["SpO2_Conf"][idx] = parsed_data["SpO2_Conf"]
+        elif write_idx > 0:
+            prev_idx = (write_idx - 1) % MAX_POINTS
+            buffers["SpO2_Conf"][idx] = buffers["SpO2_Conf"][prev_idx]
+
+        write_idx += 1
+        new_samples += 1
+        sample_count += 1
+
+    if new_samples and sample_count % 200 == 0:
+        log.info("Samples: %s, write idx: %s", sample_count, write_idx)
+
+    return new_samples
+
+
+def read_rtt_data() -> int:
+    """Read data from RTT and parse it into the circular buffer."""
     if not jlink or not jlink.connected():
         return 0
 
-    new_samples = 0
     try:
         read_bytes = jlink.rtt_read(0, 4096)
         if not read_bytes:
             return 0
-
-        data = "".join(map(chr, read_bytes))
-        line_buffer += data
-
-        lines = line_buffer.split("\n")
-        line_buffer = lines[-1]  # keep incomplete line
-
-        for line in lines[:-1]:
-            parsed_data = parse_data_line(line)
-            if not parsed_data:
-                continue
-
-            if "TS" in parsed_data:
-                ts_value = float(parsed_data["TS"])
-                if ts_start_ms is None:
-                    ts_start_ms = ts_value
-                elapsed_time = max(0.0, (ts_value - ts_start_ms) / 1000.0)
-            else:
-                elapsed_time = (current_milli_time() - start_time) / 1000.0
-            if write_idx > 0:
-                prev_time = last_elapsed_time
-                if elapsed_time <= prev_time:
-                    elapsed_time = prev_time + (1.0 / max(1.0, SAMPLE_RATE))
-            last_elapsed_time = elapsed_time
-            idx = write_idx % MAX_POINTS
-            buffers["time"][idx] = elapsed_time
-            buffers["GREEN1"][idx] = parsed_data["GREEN1"]
-            buffers["IR1"][idx] = parsed_data["IR1"]
-            buffers["RED1"][idx] = parsed_data["RED1"]
-            buffers["GREEN2"][idx] = parsed_data["GREEN2"]
-            buffers["IR2"][idx] = parsed_data["IR2"]
-            buffers["RED2"][idx] = parsed_data["RED2"]
-            buffers["X"][idx] = parsed_data["X"]
-            buffers["Y"][idx] = parsed_data["Y"]
-            buffers["Z"][idx] = parsed_data["Z"]
-            
-            # Only update HR/confidence fields if present (carry forward previous values)
-            if "HR" in parsed_data:
-                buffers["HR"][idx] = parsed_data["HR"]
-            elif write_idx > 0:
-                prev_idx = (write_idx - 1) % MAX_POINTS
-                buffers["HR"][idx] = buffers["HR"][prev_idx]
-            
-            if "HR_Conf" in parsed_data:
-                buffers["HR_Conf"][idx] = parsed_data["HR_Conf"]
-            elif write_idx > 0:
-                prev_idx = (write_idx - 1) % MAX_POINTS
-                buffers["HR_Conf"][idx] = buffers["HR_Conf"][prev_idx]
-            
-            if "RR" in parsed_data:
-                buffers["RR"][idx] = parsed_data["RR"]
-            elif write_idx > 0:
-                prev_idx = (write_idx - 1) % MAX_POINTS
-                buffers["RR"][idx] = buffers["RR"][prev_idx]
-            
-            if "RR_Conf" in parsed_data:
-                buffers["RR_Conf"][idx] = parsed_data["RR_Conf"]
-            elif write_idx > 0:
-                prev_idx = (write_idx - 1) % MAX_POINTS
-                buffers["RR_Conf"][idx] = buffers["RR_Conf"][prev_idx]
-            
-            if "SC" in parsed_data:
-                buffers["SC"][idx] = parsed_data["SC"]
-            elif write_idx > 0:
-                prev_idx = (write_idx - 1) % MAX_POINTS
-                buffers["SC"][idx] = buffers["SC"][prev_idx]
-            
-            if "Activity" in parsed_data:
-                buffers["Activity"][idx] = parsed_data["Activity"]
-            elif write_idx > 0:
-                prev_idx = (write_idx - 1) % MAX_POINTS
-                buffers["Activity"][idx] = buffers["Activity"][prev_idx]
-            
-            if "SpO2" in parsed_data:
-                buffers["SpO2"][idx] = parsed_data["SpO2"]
-            elif write_idx > 0:
-                prev_idx = (write_idx - 1) % MAX_POINTS
-                buffers["SpO2"][idx] = buffers["SpO2"][prev_idx]
-            
-            if "SpO2_Conf" in parsed_data:
-                buffers["SpO2_Conf"][idx] = parsed_data["SpO2_Conf"]
-            elif write_idx > 0:
-                prev_idx = (write_idx - 1) % MAX_POINTS
-                buffers["SpO2_Conf"][idx] = buffers["SpO2_Conf"][prev_idx]
-
-            write_idx += 1
-            new_samples += 1
-            sample_count += 1
-
-        if new_samples and sample_count % 200 == 0:
-            log.info("Samples: %s, write idx: %s", sample_count, write_idx)
-
+        return _process_incoming_data("".join(map(chr, read_bytes)))
     except Exception as exc:  # pragma: no cover - defensive logging
         log.error("Error reading RTT data: %s", exc)
+        return 0
 
-    return new_samples
+
+def read_uart_data() -> int:
+    """Read data from UART and parse it into the circular buffer."""
+    if not serial_port or not serial_port.is_open:
+        return 0
+
+    try:
+        waiting = serial_port.in_waiting
+        if waiting == 0:
+            return 0
+        raw = serial_port.read(min(waiting, 4096))
+        if not raw:
+            return 0
+        return _process_incoming_data(raw.decode("utf-8", errors="replace"))
+    except Exception as exc:  # pragma: no cover - defensive logging
+        log.error("Error reading UART data: %s", exc)
+        return 0
+
+
+def read_data() -> int:
+    """Read data from the active transport (RTT or UART)."""
+    if transport_mode == "uart":
+        return read_uart_data()
+    return read_rtt_data()
 
 
 def clear_stream_buffers() -> None:
@@ -1217,7 +1271,7 @@ class HRPlotWindow(QtWidgets.QMainWindow):
 
 
 class HRPlotController(QtCore.QObject):
-    """Controller coordinating RTT reading and fast PyQtGraph updates."""
+    """Controller coordinating data reading (RTT or UART) and fast PyQtGraph updates."""
 
     def __init__(self, update_interval_ms: int = 16):
         super().__init__()
@@ -1256,7 +1310,7 @@ class HRPlotController(QtCore.QObject):
         if self._paused:
             return
         
-        read_rtt_data()
+        read_data()
         windowed = extract_windowed_data()
         if not windowed:
             return
@@ -1434,20 +1488,55 @@ class HRPlotController(QtCore.QObject):
 
 def cleanup() -> None:
     """Cleanup resources."""
-    global jlink
+    global jlink, serial_port
     if jlink and jlink.connected():
         log.info("Closing JLink connection...")
         jlink.close()
+    if serial_port and serial_port.is_open:
+        log.info("Closing UART connection...")
+        serial_port.close()
     log.info("Cleanup complete.")
 
 
 def main() -> None:
     """Main entry point."""
+    parser = argparse.ArgumentParser(
+        description="Real-time HR PPG data plotter via RTT or UART",
+    )
+    parser.add_argument(
+        "--uart", metavar="PORT",
+        help="Use UART instead of RTT (e.g. /dev/ttyUSB0 or COM3)",
+    )
+    parser.add_argument(
+        "--baud", type=int, default=1000000,
+        help="UART baud rate (default: 1000000)",
+    )
+    parser.add_argument(
+        "--qt-platform", choices=["auto", "xcb", "wayland", "offscreen"], default="auto",
+        help="Force Qt platform plugin to avoid display backend issues",
+    )
+    parser.add_argument(
+        "--software-opengl", action="store_true",
+        help="Use software OpenGL rendering (helps with unstable GPU/driver setups)",
+    )
+    args = parser.parse_args()
+
     plotter: Optional[HRPlotController] = None
     try:
-        init_jlink()
+        if args.uart:
+            init_uart(args.uart, args.baud)
+        else:
+            init_jlink()
 
-        app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv)
+        if args.qt_platform != "auto":
+            os.environ["QT_QPA_PLATFORM"] = args.qt_platform
+            log.info("Forcing QT_QPA_PLATFORM=%s", args.qt_platform)
+
+        if args.software_opengl and hasattr(QtCore.Qt, "AA_UseSoftwareOpenGL"):
+            QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_UseSoftwareOpenGL, True)
+            log.info("Using software OpenGL rendering")
+
+        app = QtWidgets.QApplication.instance() or QtWidgets.QApplication(sys.argv[:1])
         plotter = HRPlotController()
         plotter.start()
 
