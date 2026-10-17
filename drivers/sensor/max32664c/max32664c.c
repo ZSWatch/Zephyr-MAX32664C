@@ -20,6 +20,7 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx
 			   uint8_t *rx_buf, uint32_t rx_len, uint16_t delay_ms)
 {
 	const struct max32664c_config *config = dev->config;
+	int err = 0;
 
 	/* Wake up the sensor hub before the transmission starts (min. 300 us) */
 	gpio_pin_set_dt(&config->mfio_gpio, false);
@@ -27,21 +28,28 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx
 
 	if (i2c_write_dt(&config->i2c, tx_buf, tx_len)) {
 		LOG_ERR("I2C transmission error!");
-		return -EBUSY;
+		err = -EBUSY;
+		goto out;
 	}
 
 	k_msleep(delay_ms);
 
 	if (i2c_read_dt(&config->i2c, rx_buf, rx_len)) {
 		LOG_ERR("I2C read error!");
-		return -EBUSY;
+		err = -EBUSY;
+		goto out;
 	}
 
 	k_msleep(MAX32664C_DEFAULT_CMD_DELAY);
 
-	/* The sensor hub can enter sleep mode again now */
+out:
+	/* Release MFIO on errors too, so the hub is allowed to sleep. */
 	gpio_pin_set_dt(&config->mfio_gpio, true);
 	k_usleep(300);
+
+	if (err) {
+		return err;
+	}
 
 	/* Check the status byte for a valid transaction */
 	if (rx_buf[0] != 0) {
@@ -144,6 +152,9 @@ static int max32664c_stop_algo(const struct device *dev)
 	uint8_t tx[3];
 	struct max32664c_data *data = dev->data;
 
+	/* The caller holds worker_lock, so the current poll has finished. */
+	data->worker_enabled = false;
+
 	if (data->device_mode == MAX32664C_OP_MODE_IDLE) {
 		LOG_DBG("No algorithm running, nothing to stop.");
 		return 0;
@@ -196,8 +207,6 @@ static int max32664c_stop_algo(const struct device *dev)
 	};
 
 	data->device_mode = MAX32664C_OP_MODE_IDLE;
-
-	k_thread_suspend(data->thread_id);
 
 	return 0;
 }
@@ -274,7 +283,8 @@ static int max32664c_set_mode_raw(const struct device *dev)
 
 	data->device_mode = MAX32664C_OP_MODE_RAW;
 
-	k_thread_resume(data->thread_id);
+	data->worker_enabled = true;
+	k_sem_give(&data->worker_wake);
 
 	return 0;
 }
@@ -470,7 +480,8 @@ static int max32664c_set_mode_algo(const struct device *dev, enum max32664c_devi
 #endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 
-	k_thread_resume(data->thread_id);
+	data->worker_enabled = true;
+	k_sem_give(&data->worker_wake);
 
 	return 0;
 }
@@ -526,7 +537,8 @@ static int max32664c_set_mode_scd(const struct device *dev)
 
 	data->device_mode = MAX32664C_OP_MODE_SCD;
 
-	k_thread_resume(data->thread_id);
+	data->worker_enabled = true;
+	k_sem_give(&data->worker_wake);
 
 	return 0;
 }
@@ -805,7 +817,7 @@ static int max32664c_channel_get(const struct device *dev, enum sensor_channel c
 	return 0;
 }
 
-static int max32664c_attr_set(const struct device *dev, enum sensor_channel chan,
+static int max32664c_attr_set_unlocked(const struct device *dev, enum sensor_channel chan,
 			      enum sensor_attribute attr, const struct sensor_value *val)
 {
 	int err;
@@ -974,6 +986,17 @@ static int max32664c_attr_set(const struct device *dev, enum sensor_channel chan
 	}
 	}
 
+	return err;
+}
+
+static int max32664c_attr_set(const struct device *dev, enum sensor_channel chan,
+			      enum sensor_attribute attr, const struct sensor_value *val)
+{
+	struct max32664c_data *data = dev->data;
+
+	k_mutex_lock(&data->worker_lock, K_FOREVER);
+	int err = max32664c_attr_set_unlocked(dev, chan, attr, val);
+	k_mutex_unlock(&data->worker_lock);
 	return err;
 }
 

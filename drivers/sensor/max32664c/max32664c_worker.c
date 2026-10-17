@@ -243,27 +243,36 @@ void max32664c_worker(const struct device *dev)
 	LOG_DBG("Starting worker thread for device: %s", dev->name);
 
 	while (data->is_thread_running) {
-		err = max32664c_get_hub_status(dev, &status, &i2c_error);
-		if (err) {
-			LOG_ERR("Failed to get hub status! Error: %d", err);
+		uint32_t poll_delay_ms = 5;
+
+		k_mutex_lock(&data->worker_lock, K_FOREVER);
+		if (!data->worker_enabled) {
+			k_mutex_unlock(&data->worker_lock);
+			k_sem_take(&data->worker_wake, K_FOREVER);
 			continue;
 		}
 
+		err = max32664c_get_hub_status(dev, &status, &i2c_error);
+		if (err) {
+			LOG_ERR("Failed to get hub status! Error: %d", err);
+			goto next_poll;
+		}
+
 		if (!(status & (1 << MAX32664C_BIT_STATUS_DATA_RDY))) {
-			LOG_WRN("No data ready! Status: 0x%X", status);
-			k_msleep(100);
-			continue;
+			LOG_DBG("No data ready! Status: 0x%X", status);
+			poll_delay_ms = 100;
+			goto next_poll;
 		}
 
 		err = max32664c_get_fifo_count(dev, &fifo);
 		if (err) {
 			LOG_ERR("Failed to get FIFO count! Error: %d", err);
-			continue;
+			goto next_poll;
 		}
 
 		if (fifo == 0) {
 			LOG_DBG("No data available in the FIFO.");
-			continue;
+			goto next_poll;
 		}
 #ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
 		else if (fifo > CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE) {
@@ -271,7 +280,7 @@ void max32664c_worker(const struct device *dev)
 				fifo, CONFIG_MAX32664C_SAMPLE_BUFFER_SIZE);
 
 			/* TODO: Find a good way to clear the FIFO */
-			continue;
+			goto next_poll;
 		}
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 
@@ -292,7 +301,7 @@ void max32664c_worker(const struct device *dev)
 
 		if (data->max32664_i2c_buffer == NULL) {
 			LOG_ERR("Can not allocate memory for the I2C buffer!");
-			continue;
+			goto next_poll;
 		}
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 
@@ -376,6 +385,8 @@ void max32664c_worker(const struct device *dev)
 		k_free(data->max32664_i2c_buffer);
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 
-		k_msleep(5);
+next_poll:
+		k_mutex_unlock(&data->worker_lock);
+		k_msleep(poll_delay_ms);
 	}
 }
