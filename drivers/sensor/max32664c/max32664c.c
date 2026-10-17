@@ -624,14 +624,17 @@ static int max32664c_disable_sensors(const struct device *dev)
 	uint8_t tx[4];
 	struct max32664c_data *data = dev->data;
 
-	if (max32664c_stop_algo(dev)) {
-		LOG_ERR("Failed to stop the algorithm!");
+	/* Only leave wake-on-motion if it was actually entered. Some firmware
+	 * versions reject this command during ordinary continuous HRM.
+	 */
+	if (data->device_mode == MAX32664C_OP_MODE_WAKE_ON_MOTION &&
+	    max32664c_exit_mode_wake_on_motion(dev)) {
+		LOG_ERR("Failed to exit wake on motion mode!");
 		return -EINVAL;
 	}
 
-	/* Leave wake on motion first because we disable the accelerometer */
-	if (max32664c_exit_mode_wake_on_motion(dev)) {
-		LOG_ERR("Failed to exit wake on motion mode!");
+	if (max32664c_stop_algo(dev)) {
+		LOG_ERR("Failed to stop the algorithm!");
 		return -EINVAL;
 	}
 
