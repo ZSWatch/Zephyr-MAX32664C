@@ -192,6 +192,9 @@ struct max32664c_data {
 	uint8_t hub_ver[3];
 
 	/* Internal */
+	struct k_mutex worker_lock;
+	struct k_sem worker_wake;
+	bool worker_enabled;
 	struct k_thread thread;
 	k_tid_t thread_id;
 	bool is_thread_running;

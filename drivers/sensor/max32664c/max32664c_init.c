@@ -215,6 +215,10 @@ int max32664c_init_hub(const struct device *dev)
 {
 	struct max32664c_data *data = dev->data;
 
+	k_mutex_init(&data->worker_lock);
+	k_sem_init(&data->worker_wake, 0, 1);
+	data->worker_enabled = false;
+
 	LOG_DBG("Initialize sensor hub");
 
 	if (max32664c_write_config(dev)) {
@@ -232,7 +236,6 @@ int max32664c_init_hub(const struct device *dev)
 					  K_THREAD_STACK_SIZEOF(data->thread_stack),
 					  (k_thread_entry_t)max32664c_worker, (void *)dev, NULL,
 					  NULL, K_LOWEST_APPLICATION_THREAD_PRIO, 0, K_NO_WAIT);
-	k_thread_suspend(data->thread_id);
 	k_thread_name_set(data->thread_id, "max32664c_worker");
 
 	LOG_DBG("Initial configuration:");
