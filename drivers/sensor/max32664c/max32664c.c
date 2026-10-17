@@ -172,7 +172,9 @@ static int max32664c_stop_algo(const struct device *dev)
 
 	switch (data->device_mode) {
 	case MAX32664C_OP_MODE_RAW: {
-#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
+#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
+		k_msgq_purge(&data->raw_report_queue);
+#else
 		k_msgq_cleanup(&data->raw_report_queue);
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 		break;
@@ -180,7 +182,10 @@ static int max32664c_stop_algo(const struct device *dev)
 #ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
 	case MAX32664C_OP_MODE_ALGO_AEC_EXT:
 	case MAX32664C_OP_MODE_ALGO_AGC_EXT: {
-#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
+#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
+		k_msgq_purge(&data->ext_report_queue);
+		k_msgq_purge(&data->raw_report_queue);
+#else
 		k_msgq_cleanup(&data->ext_report_queue);
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 		break;
@@ -188,14 +193,19 @@ static int max32664c_stop_algo(const struct device *dev)
 #else
 	case MAX32664C_OP_MODE_ALGO_AEC:
 	case MAX32664C_OP_MODE_ALGO_AGC: {
-#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
+#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
+		k_msgq_purge(&data->report_queue);
+		k_msgq_purge(&data->raw_report_queue);
+#else
 		k_msgq_cleanup(&data->report_queue);
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 		break;
 	}
 #endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 	case MAX32664C_OP_MODE_SCD: {
-#ifndef CONFIG_MAX32664C_USE_STATIC_MEMORY
+#ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
+		k_msgq_purge(&data->scd_report_queue);
+#else
 		k_msgq_cleanup(&data->scd_report_queue);
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 		break;
@@ -669,25 +679,21 @@ static int max32664c_sample_fetch(const struct device *dev, enum sensor_channel 
 		LOG_DBG("Device is idle, no data to fetch!");
 		return -EAGAIN;
 	case MAX32664C_OP_MODE_SCD:
-		k_msgq_get(&data->scd_report_queue, &data->scd, K_NO_WAIT);
-		return 0;
+		return k_msgq_get(&data->scd_report_queue, &data->scd, K_NO_WAIT);
 #ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
 	case MAX32664C_OP_MODE_ALGO_AEC_EXT:
 	case MAX32664C_OP_MODE_ALGO_AGC_EXT:
 		k_msgq_get(&data->raw_report_queue, &data->raw, K_NO_WAIT);
-		k_msgq_get(&data->ext_report_queue, &data->ext, K_NO_WAIT);
-		return 0;
+		return k_msgq_get(&data->ext_report_queue, &data->ext, K_NO_WAIT);
 #else
 	case MAX32664C_OP_MODE_ALGO_AEC:
 	case MAX32664C_OP_MODE_ALGO_AGC:
 		k_msgq_get(&data->raw_report_queue, &data->raw, K_NO_WAIT);
-		k_msgq_get(&data->report_queue, &data->report, K_NO_WAIT);
-		return 0;
+		return k_msgq_get(&data->report_queue, &data->report, K_NO_WAIT);
 #endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 	/* Raw data are reported with normal and extended algorithms so we need to fetch them too */
 	case MAX32664C_OP_MODE_RAW:
-		k_msgq_get(&data->raw_report_queue, &data->raw, K_NO_WAIT);
-		return 0;
+		return k_msgq_get(&data->raw_report_queue, &data->raw, K_NO_WAIT);
 	default:
 		return -ENOTSUP;
 	}
