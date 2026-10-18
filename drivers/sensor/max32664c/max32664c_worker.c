@@ -7,6 +7,7 @@
  */
 
 #include "max32664c.h"
+#include <string.h>
 
 LOG_MODULE_REGISTER(maxim_max32664c_worker, CONFIG_SENSOR_LOG_LEVEL);
 
@@ -219,6 +220,17 @@ static void max32664c_parse_and_push_report(const struct device *dev)
 }
 #endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 
+/** @brief      Move FIFO record @p index to the start of the I2C buffer,
+ *              where the parse functions read it.
+ */
+static void max32664c_select_record(struct max32664c_data *data, uint8_t index, size_t size)
+{
+	if (index) {
+		memcpy(data->max32664_i2c_buffer + 1, data->max32664_i2c_buffer + 1 + index * size,
+		       size);
+	}
+}
+
 /** @brief      Worker thread to read the sensor hub.
  *              This thread does the following:
  *                  - It polls the sensor hub periodically for new results
@@ -227,7 +239,7 @@ static void max32664c_parse_and_push_report(const struct device *dev)
  *                    It's necessary to clear the complete FIFO because the sensor hub
  *                    doesn´t support the reading of a single message and not clearing
  *                    the FIFO can cause a FIFO overrun.
- *                  - Extract the message data from the FIRST item from the FIFO and
+ *                  - Extract each record from the FIFO in order and
  *                    copy them into the right message structure
  *                  - Put the message into a message queue
  *  @param dev  Pointer to device
@@ -310,17 +322,20 @@ void max32664c_worker(const struct device *dev)
 		switch (data->device_mode) {
 		case MAX32664C_OP_MODE_RAW: {
 			/* Get all samples to clear the FIFO */
-			max32664c_i2c_transmit(
+			err = max32664c_i2c_transmit(
 				dev, tx, 2, data->max32664_i2c_buffer,
 				(fifo * (sizeof(struct max32664c_raw_report_t))) +
 					1,
 				MAX32664C_DEFAULT_CMD_DELAY);
 
-			if (data->max32664_i2c_buffer[0] != 0) {
+			if (err || data->max32664_i2c_buffer[0] != 0) {
 				break;
 			}
 
-			max32664c_parse_and_push_raw(dev);
+			for (uint8_t i = 0; i < fifo; ++i) {
+				max32664c_select_record(data, i, sizeof(struct max32664c_raw_report_t));
+				max32664c_parse_and_push_raw(dev);
+			}
 
 			break;
 		}
@@ -329,19 +344,24 @@ void max32664c_worker(const struct device *dev)
 		case MAX32664C_OP_MODE_ALGO_AGC_EXT: {
 
 			/* Get all samples to clear the FIFO */
-			max32664c_i2c_transmit(
+			err = max32664c_i2c_transmit(
 				dev, tx, 2, data->max32664_i2c_buffer,
 				(fifo * (sizeof(struct max32664c_raw_report_t) +
 						sizeof(struct max32664c_ext_report_t))) +
 					1,
 				MAX32664C_DEFAULT_CMD_DELAY);
 
-			if (data->max32664_i2c_buffer[0] != 0) {
+			if (err || data->max32664_i2c_buffer[0] != 0) {
 				break;
 			}
 
-			max32664c_parse_and_push_raw(dev);
-			max32664c_parse_and_push_ext_report(dev);
+			for (uint8_t i = 0; i < fifo; ++i) {
+				max32664c_select_record(data, i,
+							sizeof(struct max32664c_raw_report_t) +
+								sizeof(struct max32664c_ext_report_t));
+				max32664c_parse_and_push_raw(dev);
+				max32664c_parse_and_push_ext_report(dev);
+			}
 
 			break;
 		}
@@ -349,19 +369,24 @@ void max32664c_worker(const struct device *dev)
 		case MAX32664C_OP_MODE_ALGO_AEC:
 		case MAX32664C_OP_MODE_ALGO_AGC: {
 			/* Get all samples to clear the FIFO */
-			max32664c_i2c_transmit(
+			err = max32664c_i2c_transmit(
 				dev, tx, 2, data->max32664_i2c_buffer,
 				(fifo * (sizeof(struct max32664c_raw_report_t) +
 						sizeof(struct max32664c_report_t))) +
 					1,
 				MAX32664C_DEFAULT_CMD_DELAY);
 
-			if (data->max32664_i2c_buffer[0] != 0) {
+			if (err || data->max32664_i2c_buffer[0] != 0) {
 				break;
 			}
 
-			max32664c_parse_and_push_raw(dev);
-			max32664c_parse_and_push_report(dev);
+			for (uint8_t i = 0; i < fifo; ++i) {
+				max32664c_select_record(data, i,
+							sizeof(struct max32664c_raw_report_t) +
+								sizeof(struct max32664c_report_t));
+				max32664c_parse_and_push_raw(dev);
+				max32664c_parse_and_push_report(dev);
+			}
 
 			break;
 		}
