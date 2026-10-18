@@ -29,6 +29,31 @@ int max32664c_acc_enable(const struct device *dev, bool enable)
 		return -EINVAL;
 	}
 
+#ifndef CONFIG_MAX32664C_USE_EXTERNAL_ACC
+	const struct max32664c_data *hub = dev->data;
+
+	/* Disabling hub reports leaves LIS2DS12 sampling. Clear ODR and HF_ODR
+	 * explicitly, preserving the full-scale and block-data-update settings.
+	 */
+	if (!enable && hub->accel_id == LIS2DS12_WHO_AM_I_VALUE) {
+		uint8_t ctrl1[2];
+		uint8_t read_ctrl1[] = {MAX32664C_FAMILY_READ_REGISTER, MAX32664C_SENSOR_ACCEL,
+					LIS2DS12_REG_CTRL1};
+
+		if (max32664c_i2c_transmit(dev, read_ctrl1, sizeof(read_ctrl1),
+					  ctrl1, sizeof(ctrl1), 10)) {
+			return -EINVAL;
+		}
+		uint8_t power_down[] = {MAX32664C_FAMILY_WRITE_REGISTER, MAX32664C_SENSOR_ACCEL,
+					LIS2DS12_REG_CTRL1,
+					ctrl1[1] & (LIS2DS12_CTRL1_FS_MASK | LIS2DS12_CTRL1_BDU)};
+
+		if (max32664c_i2c_transmit(dev, power_down, sizeof(power_down), &rx, 1, 10)) {
+			return -EINVAL;
+		}
+	}
+#endif
+
 	return 0;
 }
 

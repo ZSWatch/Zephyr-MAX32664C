@@ -23,6 +23,18 @@
 
 #define MAX32664C_DEFAULT_CMD_DELAY 10
 
+/* Sensor hub commands for accessing the registers of an attached sensor */
+#define MAX32664C_FAMILY_WRITE_REGISTER 0x40
+#define MAX32664C_FAMILY_READ_REGISTER  0x41
+#define MAX32664C_SENSOR_ACCEL          0x04
+
+/* ST LIS2DS12 accelerometer attached to the sensor hub */
+#define LIS2DS12_WHO_AM_I_VALUE 0x43
+#define LIS2DS12_REG_CTRL1      0x20
+/* CTRL1: ODR[7:4], FS[3:2], HF_ODR[1], BDU[0] */
+#define LIS2DS12_CTRL1_FS_MASK  0x0C
+#define LIS2DS12_CTRL1_BDU      BIT(0)
+
 /** @brief Output formats of the sensor hub.
  */
 enum max32664c_output_format {
