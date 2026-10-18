@@ -54,13 +54,26 @@ static int max32664c_get_fifo_count(const struct device *dev, uint8_t *fifo)
 }
 
 /** @brief      Push a item into the message queue.
+ *              When the queue is full, only the oldest item is dropped so the
+ *              remaining queued records of the current FIFO batch are kept.
  *  @param msgq Pointer to message queue
  *  @param data Pointer to data to push
  */
 static void max32664c_push_to_queue(struct k_msgq *msgq, const void *data)
 {
+	union {
+		struct max32664c_raw_report_t raw;
+#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+		struct max32664c_ext_report_t ext;
+#else
+		struct max32664c_report_t report;
+#endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
+	} oldest;
+
+	__ASSERT_NO_MSG(msgq->msg_size <= sizeof(oldest));
+
 	while (k_msgq_put(msgq, data, K_NO_WAIT) != 0) {
-		k_msgq_purge(msgq);
+		(void)k_msgq_get(msgq, &oldest, K_NO_WAIT);
 	}
 }
 
