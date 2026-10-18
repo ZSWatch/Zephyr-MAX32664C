@@ -708,6 +708,14 @@ static int max32664c_channel_get(const struct device *dev, enum sensor_channel c
 	struct max32664c_data *data = dev->data;
 
 	switch ((int)chan) {
+	case SENSOR_CHAN_MAX32664C_AFE_STATUS:
+#ifdef CONFIG_MAX32664C_USE_EXTENDED_REPORTS
+		val->val1 = data->ext.hrm_afe_ctrl_state;
+		val->val2 = data->ext.is_high_motion_for_hrm;
+		return 0;
+#else
+		return -ENOTSUP;
+#endif
 	case SENSOR_CHAN_ACCEL_X: {
 		val->val1 = data->raw.acc.x;
 		val->val2 = 0;
