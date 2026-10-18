@@ -167,6 +167,8 @@ static int max32664c_stop_algo(const struct device *dev)
 	tx[1] = 0x07;
 	tx[2] = 0x00;
 	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 120)) {
+		/* The algorithm is still running, so keep polling its reports. */
+		data->worker_enabled = true;
 		return -EINVAL;
 	}
 
