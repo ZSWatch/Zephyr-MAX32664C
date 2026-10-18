@@ -56,7 +56,11 @@ enum sensor_channel_max32664c {
 	/** Additional sensor status informations */
 	/*     Bit 0: Integration time adjustment required flag (Extended) */
 	/*     Bit 1: Sampling rate adjustment required flag (Extended) */
-	SENSOR_CHAN_MAX32664C_STATUS
+	SENSOR_CHAN_MAX32664C_STATUS,
+	/** Cached extended-report diagnostics; no additional sensor transaction.
+	 * val1: WHRM AFE controller state; val2: high-motion flag for HRM.
+	 */
+	SENSOR_CHAN_MAX32664C_AFE_STATUS
 };
 
 /* MAX32664C specific attributes */
