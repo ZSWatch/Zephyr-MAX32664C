@@ -40,8 +40,6 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx
 		goto out;
 	}
 
-	k_msleep(MAX32664C_DEFAULT_CMD_DELAY);
-
 out:
 	/* Release MFIO on errors too, so the hub is allowed to sleep. */
 	gpio_pin_set_dt(&config->mfio_gpio, true);
@@ -50,6 +48,9 @@ out:
 	if (err) {
 		return err;
 	}
+
+	/* Keep the quiet interval after the response without holding the hub awake. */
+	k_msleep(MAX32664C_DEFAULT_CMD_DELAY);
 
 	/* Check the status byte for a valid transaction */
 	if (rx_buf[0] != 0) {
