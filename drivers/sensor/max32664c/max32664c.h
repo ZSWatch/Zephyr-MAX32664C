@@ -261,7 +261,7 @@ struct max32664c_data {
 					sizeof(struct max32664c_ext_report_t)];
 #else
 	uint8_t report_queue_buffer[CONFIG_MAX32664C_QUEUE_SIZE *
-				    sizeof(struct max32664c_report_t))];
+				    sizeof(struct max32664c_report_t)];
 #endif /* CONFIG_MAX32664C_USE_EXTENDED_REPORTS */
 #endif /* CONFIG_MAX32664C_USE_STATIC_MEMORY */
 
