@@ -250,6 +250,7 @@ void max32664c_worker(const struct device *dev)
 	uint8_t fifo = 0;
 	uint8_t status = 0;
 	uint8_t i2c_error = 0;
+	const struct max32664c_config *config = dev->config;
 	struct max32664c_data *data = dev->data;
 
 	LOG_DBG("Starting worker thread for device: %s", dev->name);
@@ -263,6 +264,19 @@ void max32664c_worker(const struct device *dev)
 			k_sem_take(&data->worker_wake, K_FOREVER);
 			continue;
 		}
+		switch (data->device_mode) {
+		case MAX32664C_OP_MODE_ALGO_AEC:
+		case MAX32664C_OP_MODE_ALGO_AEC_EXT:
+		case MAX32664C_OP_MODE_ALGO_AGC:
+		case MAX32664C_OP_MODE_ALGO_AGC_EXT:
+			/* The algorithm reports once every report_period samples at 25 Hz.
+			 * Poll twice per report instead of waking the hub every few ms.
+			 */
+			poll_delay_ms = MAX(poll_delay_ms, config->report_period * 20);
+			break;
+		default:
+			break;
+		}
 
 		err = max32664c_get_hub_status(dev, &status, &i2c_error);
 		if (err) {
@@ -272,7 +286,7 @@ void max32664c_worker(const struct device *dev)
 
 		if (!(status & (1 << MAX32664C_BIT_STATUS_DATA_RDY))) {
 			LOG_DBG("No data ready! Status: 0x%X", status);
-			poll_delay_ms = 100;
+			poll_delay_ms = MAX(poll_delay_ms, 100);
 			goto next_poll;
 		}
 
