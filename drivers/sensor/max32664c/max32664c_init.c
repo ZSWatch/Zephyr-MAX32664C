@@ -211,6 +211,21 @@ static int max32664c_read_config(const struct device *dev)
 	return 0;
 }
 
+int max32664c_configure_hub(const struct device *dev)
+{
+	if (max32664c_write_config(dev)) {
+		LOG_ERR("Can not write default configuration!");
+		return -EINVAL;
+	}
+
+	if (max32664c_read_config(dev)) {
+		LOG_ERR("Can not read configuration!");
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
 int max32664c_init_hub(const struct device *dev)
 {
 	struct max32664c_data *data = dev->data;
@@ -221,13 +236,7 @@ int max32664c_init_hub(const struct device *dev)
 
 	LOG_DBG("Initialize sensor hub");
 
-	if (max32664c_write_config(dev)) {
-		LOG_ERR("Can not write default configuration!");
-		return -EINVAL;
-	}
-
-	if (max32664c_read_config(dev)) {
-		LOG_ERR("Can not read configuration!");
+	if (max32664c_configure_hub(dev)) {
 		return -EINVAL;
 	}
 
