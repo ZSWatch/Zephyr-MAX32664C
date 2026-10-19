@@ -143,36 +143,12 @@ static int max32664c_check_sensors(const struct device *dev)
 	return 0;
 }
 
-/** @brief      Stop the current algorithm.
- *  @param dev  Pointer to device
- *  @return     0 when successful
+/** @brief      Drop the queued reports of the current mode.
+ *  @param data Pointer to device data
+ *  @return     0 when successful, -EINVAL for an unknown mode
  */
-static int max32664c_stop_algo(const struct device *dev)
+static int max32664c_clear_reports(struct max32664c_data *data)
 {
-	uint8_t rx;
-	uint8_t tx[3];
-	struct max32664c_data *data = dev->data;
-
-	/* The caller holds worker_lock, so the current poll has finished. */
-	data->worker_enabled = false;
-
-	if (data->device_mode == MAX32664C_OP_MODE_IDLE) {
-		LOG_DBG("No algorithm running, nothing to stop.");
-		return 0;
-	}
-
-	LOG_DBG("Stop the current algorithm...");
-
-	/* Stop the algorithm */
-	tx[0] = 0x52;
-	tx[1] = 0x07;
-	tx[2] = 0x00;
-	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 120)) {
-		/* The algorithm is still running, so keep polling its reports. */
-		data->worker_enabled = true;
-		return -EINVAL;
-	}
-
 	switch (data->device_mode) {
 	case MAX32664C_OP_MODE_RAW: {
 #ifdef CONFIG_MAX32664C_USE_STATIC_MEMORY
@@ -217,7 +193,44 @@ static int max32664c_stop_algo(const struct device *dev)
 		LOG_ERR("Unknown device mode: %d", data->device_mode);
 		return -EINVAL;
 	}
-	};
+	}
+
+	return 0;
+}
+
+/** @brief      Stop the current algorithm.
+ *  @param dev  Pointer to device
+ *  @return     0 when successful
+ */
+static int max32664c_stop_algo(const struct device *dev)
+{
+	uint8_t rx;
+	uint8_t tx[3];
+	struct max32664c_data *data = dev->data;
+
+	/* The caller holds worker_lock, so the current poll has finished. */
+	data->worker_enabled = false;
+
+	if (data->device_mode == MAX32664C_OP_MODE_IDLE) {
+		LOG_DBG("No algorithm running, nothing to stop.");
+		return 0;
+	}
+
+	LOG_DBG("Stop the current algorithm...");
+
+	/* Stop the algorithm */
+	tx[0] = 0x52;
+	tx[1] = 0x07;
+	tx[2] = 0x00;
+	if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, 120)) {
+		/* The algorithm is still running, so keep polling its reports. */
+		data->worker_enabled = true;
+		return -EINVAL;
+	}
+
+	if (max32664c_clear_reports(data)) {
+		return -EINVAL;
+	}
 
 	data->device_mode = MAX32664C_OP_MODE_IDLE;
 
@@ -1168,10 +1181,12 @@ static int max32664c_init(const struct device *dev)
 
 #ifdef CONFIG_PM_DEVICE
 /* Stop driving RESET and MFIO so an unpowered hub is not supplied through them */
-static void max32664c_release_pins(const struct max32664c_config *config)
+static int max32664c_release_pins(const struct max32664c_config *config)
 {
-	gpio_pin_configure_dt(&config->reset_gpio, GPIO_DISCONNECTED);
-	gpio_pin_configure_dt(&config->mfio_gpio, GPIO_DISCONNECTED);
+	int reset_err = gpio_pin_configure_dt(&config->reset_gpio, GPIO_DISCONNECTED);
+	int mfio_err = gpio_pin_configure_dt(&config->mfio_gpio, GPIO_DISCONNECTED);
+
+	return reset_err ? reset_err : mfio_err;
 }
 
 static int max32664c_pm_action(const struct device *dev, enum pm_device_action action)
@@ -1192,17 +1207,22 @@ static int max32664c_pm_action(const struct device *dev, enum pm_device_action a
 		const struct max32664c_config *config = dev->config;
 		struct max32664c_data *data = dev->data;
 
-		/* The hub supply is about to be removed */
+		/* The hub supply is about to be removed and the hub loses its state, so the
+		 * caller has to set the operating mode again after TURN_ON.
+		 */
 		k_mutex_lock(&data->worker_lock, K_FOREVER);
 		data->worker_enabled = false;
+		if (data->device_mode != MAX32664C_OP_MODE_IDLE) {
+			(void)max32664c_clear_reports(data);
+			data->device_mode = MAX32664C_OP_MODE_IDLE;
+		}
 		k_mutex_unlock(&data->worker_lock);
-		max32664c_release_pins(config);
-		break;
+		return max32664c_release_pins(config);
 	}
 	case PM_DEVICE_ACTION_TURN_ON: {
 		/* The hub lost its configuration with the supply, reset and configure it again */
 		if (max32664c_reset_hub(dev) || max32664c_configure_hub(dev)) {
-			max32664c_release_pins(dev->config);
+			(void)max32664c_release_pins(dev->config);
 			return -EIO;
 		}
 		break;
