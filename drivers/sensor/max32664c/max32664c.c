@@ -1073,17 +1073,16 @@ static DEVICE_API(sensor, max32664c_driver_api) = {
 	.channel_get = max32664c_channel_get,
 };
 
-static int max32664c_init(const struct device *dev)
+/** @brief      Reset the hub into application mode and check its firmware and sensors.
+ *  @param dev  Pointer to device
+ *  @return     0 when successful
+ */
+static int max32664c_reset_hub(const struct device *dev)
 {
 	uint8_t tx[2];
 	uint8_t rx[4];
 	const struct max32664c_config *config = dev->config;
 	struct max32664c_data *data = dev->data;
-
-	if (!i2c_is_ready_dt(&config->i2c)) {
-		LOG_ERR("I2C not ready");
-		return -ENODEV;
-	}
 
 	gpio_pin_configure_dt(&config->reset_gpio, GPIO_OUTPUT);
 	gpio_pin_configure_dt(&config->mfio_gpio, GPIO_OUTPUT);
@@ -1123,6 +1122,23 @@ static int max32664c_init(const struct device *dev)
 		return -EINVAL;
 	}
 
+	return 0;
+}
+
+static int max32664c_init(const struct device *dev)
+{
+	const struct max32664c_config *config = dev->config;
+	struct max32664c_data *data = dev->data;
+
+	if (!i2c_is_ready_dt(&config->i2c)) {
+		LOG_ERR("I2C not ready");
+		return -ENODEV;
+	}
+
+	if (max32664c_reset_hub(dev)) {
+		return -EINVAL;
+	}
+
 	if (max32664c_init_hub(dev)) {
 		return -EINVAL;
 	}
@@ -1151,6 +1167,13 @@ static int max32664c_init(const struct device *dev)
 }
 
 #ifdef CONFIG_PM_DEVICE
+/* Stop driving RESET and MFIO so an unpowered hub is not supplied through them */
+static void max32664c_release_pins(const struct max32664c_config *config)
+{
+	gpio_pin_configure_dt(&config->reset_gpio, GPIO_DISCONNECTED);
+	gpio_pin_configure_dt(&config->mfio_gpio, GPIO_DISCONNECTED);
+}
+
 static int max32664c_pm_action(const struct device *dev, enum pm_device_action action)
 {
 	switch (action) {
@@ -1166,22 +1189,22 @@ static int max32664c_pm_action(const struct device *dev, enum pm_device_action a
 		break;
 	}
 	case PM_DEVICE_ACTION_TURN_OFF: {
-		uint8_t rx;
-		uint8_t tx[3];
+		const struct max32664c_config *config = dev->config;
+		struct max32664c_data *data = dev->data;
 
-		/* Send a shut down command */
-		/* NOTE: Toggling RSTN is needed to wake the device */
-		tx[0] = 0x01;
-		tx[1] = 0x00;
-		tx[2] = 0x01;
-		if (max32664c_i2c_transmit(dev, tx, 3, &rx, 1, MAX32664C_DEFAULT_CMD_DELAY)) {
-			return -EINVAL;
-		}
+		/* The hub supply is about to be removed */
+		k_mutex_lock(&data->worker_lock, K_FOREVER);
+		data->worker_enabled = false;
+		k_mutex_unlock(&data->worker_lock);
+		max32664c_release_pins(config);
 		break;
 	}
 	case PM_DEVICE_ACTION_TURN_ON: {
-		/* Toggling RSTN is needed to turn the device on */
-		max32664c_init(dev);
+		/* The hub lost its configuration with the supply, reset and configure it again */
+		if (max32664c_reset_hub(dev) || max32664c_configure_hub(dev)) {
+			max32664c_release_pins(dev->config);
+			return -EIO;
+		}
 		break;
 	}
 	default: {

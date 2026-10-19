@@ -303,6 +303,12 @@ int max32664c_i2c_transmit(const struct device *dev, uint8_t *tx_buf, uint8_t tx
  */
 int max32664c_init_hub(const struct device *dev);
 
+/** @brief      Write and read back the hub configuration, without creating the worker.
+ *  @param dev  Pointer to device
+ *  @return     0 when successful
+ */
+int max32664c_configure_hub(const struct device *dev);
+
 #ifdef CONFIG_MAX32664C_USE_INTERRUPT
 /** @brief      Initialize the interrupt support for the sensor hub.
  *  @param dev  Pointer to device
